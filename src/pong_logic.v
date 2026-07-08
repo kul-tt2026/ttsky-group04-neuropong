@@ -1,4 +1,4 @@
-module pong (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y);
+module pong (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score);
     input wire clk;
     input wire reset;
 
@@ -13,6 +13,9 @@ module pong (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down,
 
     output reg [9:0] ball_x;
     output reg [9:0] ball_y;
+
+    output reg [3:0] l_score;
+    output reg [3:0] r_score;
 
     parameter V_DISPLAY = 480;
     parameter H_DISPLAY = 640;
@@ -40,6 +43,10 @@ module pong (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down,
 
             ball_dir_x <= 0;
             ball_dir_y <= 0;
+
+            l_score <= 4'd0;
+            r_score <= 4'd0;
+
         end else begin
 
             // ball position update
@@ -63,15 +70,39 @@ module pong (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down,
                 ball_dir_y <= 1;
             end 
 
-            // left and right border collision
-            if (ball_x <= BALL_SPEED || (ball_x + X + BALL_SPEED) >= H_DISPLAY) begin        
-                ball_dir_x <= ~ball_dir_x;
+            // left border collision
+            if (ball_x <= BALL_SPEED) begin        
+                ball_dir_x <= 0;
 
                 l_paddle_y <= V_DISPLAY/2;
                 r_paddle_y <= V_DISPLAY/2;
 
                 ball_x <= H_DISPLAY/2;
                 ball_y <= V_DISPLAY/2;
+
+                if (r_score == 4'd9) begin
+                    l_score <= 4'd0;
+                    r_score <= 4'd0;
+                end else begin
+                    r_score <= r_score + 1;
+                end
+
+            // right border collision
+            end else if (ball_x + X + BALL_SPEED >= H_DISPLAY) begin
+                ball_dir_x <= 1;
+
+                l_paddle_y <= V_DISPLAY/2;
+                r_paddle_y <= V_DISPLAY/2;
+
+                ball_x <= H_DISPLAY/2;
+                ball_y <= V_DISPLAY/2;
+
+                if (l_score == 4'd9) begin
+                    l_score <= 4'd0;
+                    r_score <= 4'd0;
+                end else begin
+                    l_score <= l_score + 1;
+                end
 
             // left paddle collision
             end else if (ball_x == L_PADDLE_X + X && (ball_y + X >= l_paddle_y && ball_y < l_paddle_y + PADDLE_HEIGHT))  begin

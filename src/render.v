@@ -1,4 +1,4 @@
-module render(clk, reset, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y, ball_x, ball_y, red, green, blue);
+module render(clk, reset, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score, red, green, blue);
 
     // IO
     input wire clk;
@@ -12,6 +12,8 @@ module render(clk, reset, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y,
     input wire [9:0] r_paddle_y;
     input wire [9:0] ball_x;        //position of top left corner
     input wire [9:0] ball_y;
+    input wire [3:0] l_score;
+    input wire [3:0] r_score;
 
     output reg [1:0] red;
     output reg [1:0] green;
@@ -27,7 +29,15 @@ module render(clk, reset, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y,
     wire l_paddle_in = (h_count >= L_PADDLE_X && h_count < L_PADDLE_X + X) && (v_count >= l_paddle_y && v_count < l_paddle_y + 5*X);
     wire r_paddle_in = (h_count >= R_PADDLE_X && h_count < R_PADDLE_X + X) && (v_count >= r_paddle_y && v_count < r_paddle_y + 5*X);
 
-
+    // kan nog eventueel in project.v
+    wire draw_score;
+    score_render score_inst (
+        .h_count(h_count),
+        .v_count(v_count),
+        .l_score(l_score),
+        .r_score(r_score),
+        .draw_score(draw_score)
+    );
     
     always @(posedge clk) begin
         if (reset) begin
@@ -52,6 +62,11 @@ module render(clk, reset, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y,
                     red <= 2'b00;
                     green <= 2'b00;
                     blue <= 2'b11;
+                // scores
+                end else if (draw_score) begin
+                    red <= 2'b10;
+                    green <= 2'b10;
+                    blue <= 2'b10;
                 // background
                 end else begin
                     red <= 2'b00;
