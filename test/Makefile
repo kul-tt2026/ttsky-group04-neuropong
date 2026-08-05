@@ -13,6 +13,7 @@ ifneq ($(GATES),yes)
 # RTL simulation:
 SIM_BUILD        = sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
+VERILOG_SOURCES += $(PWD)/../src/VGA_sync.v
 
 else
 
@@ -30,6 +31,7 @@ VERILOG_SOURCES += $(PDK_PATH)/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.
 # This gets copied in by the GDS action workflow
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
+
 endif
 
 # Include the testbench sources:
@@ -37,7 +39,7 @@ VERILOG_SOURCES += $(PWD)/tb.v
 TOPLEVEL         = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test
+COCOTB_TEST_MODULES = test, test_VGA_sync
 
 # Include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim

@@ -8,8 +8,8 @@ module sync(clk, reset, h_count, v_count , hsync, vsync, draw_enable);
     input wire reset;
     output reg[9:0] h_count; // 0-799
     output reg[9:0] v_count; // 0-524
-    output reg hsync;
-    output reg vsync;
+    output wire hsync;
+    output wire vsync;
     output wire draw_enable;
 
 
@@ -36,22 +36,16 @@ module sync(clk, reset, h_count, v_count , hsync, vsync, draw_enable);
 
 
     assign draw_enable = (h_count < H_DISPLAY) && (v_count < V_DISPLAY);
+    assign hsync = ~(H_SYNC_BEGIN <= h_count && H_SYNC_END >= h_count);
+    assign vsync = ~(V_SYNC_BEGIN <= v_count && V_SYNC_END >= v_count);
 
     always @(posedge clk) begin
 
         if (reset)begin
             h_count <= 0;
             v_count <= 0;
-            hsync <= 1'b1;
-            vsync <= 1'b1;
 
         end else begin
-
-            hsync <= ~(H_SYNC_BEGIN <= h_count && H_SYNC_END >= h_count);
-            vsync <= ~(V_SYNC_BEGIN <= v_count && V_SYNC_END >= v_count);
-
-            
-
             if (h_max) begin
                 h_count <= 0;
 
@@ -59,11 +53,11 @@ module sync(clk, reset, h_count, v_count , hsync, vsync, draw_enable);
                     v_count <= 0;
 
                 end else begin
-                    v_count <= 1 + v_count;
+                    v_count <= 1'b1 + v_count;
                 end
 
             end else begin
-                h_count <= 1 + h_count;
+                h_count <= 1'b1 + h_count;
 
             end
         end
