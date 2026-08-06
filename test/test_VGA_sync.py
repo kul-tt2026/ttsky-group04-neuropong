@@ -19,49 +19,51 @@ V_TOTAL = V_DISPLAY + V_FRONT_PORCH + V_SYNC + V_BACK_PORCH  # 525 lines
 
 
 async def reset_dut(dut):
-    dut.reset.value = 1
+    dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
-    dut.reset.value = 0
+    dut.rst_n.value = 1
     await RisingEdge(dut.clk)
 
 
 @cocotb.test()
 async def test_VGA_sync(dut):
-    dut._log.info("Start")
+    dut._log.info("Start VGA_SYNC")
 
     clock = Clock(dut.clk, 39.72, unit="ns") # 25.175 MHz ==> 60 FPS
     cocotb.start_soon(clock.start())
 
     await reset_dut(dut)
 
-    assert (dut.h_count.value == 0), f"Expect h_count=0 , but is {dut.h_count.value}"
-    assert (dut.v_count.value == 0), f"Expect v_count=0 , but is {dut.v_count.value}"
+    vga_sync = dut.user_project.sync_inst
 
-    assert (dut.draw_enable.value == 1), "draw_enable must be high at (0,0)"
+    assert (vga_sync.h_count.value == 0), f"Expect h_count=0 , but is {vga_sync.h_count.value}"
+    assert (vga_sync.v_count.value == 0), f"Expect v_count=0 , but is {vga_sync.v_count.value}"
 
-    assert (dut.hsync.value == 1), "hsync is active-low, must be one on display"
-    assert (dut.vsync.value == 1), "vsync is active-low, must be one on display"
+    assert (vga_sync.draw_enable.value == 1), "draw_enable must be high at (0,0)"
+
+    assert (vga_sync.hsync.value == 1), "hsync is active-low, must be one on display"
+    assert (vga_sync.vsync.value == 1), "vsync is active-low, must be one on display"
 
     # Assertions on one horizontal length
     for h in range(H_TOTAL):
-        assert (dut.h_count.value == h), f"h_count mismatch with {h}"
+        assert (vga_sync.h_count.value == h), f"h_count mismatch with {h}"
 
         expected_draw = 1 if (h< H_DISPLAY) else 0
-        assert (dut.draw_enable.value == expected_draw), f"draw_enable error at h={h}"
+        assert (vga_sync.draw_enable.value == expected_draw), f"draw_enable error at h={h}"
 
         is_hsync_active = ((H_DISPLAY + H_FRONT_PORCH) <= h < (H_DISPLAY + H_FRONT_PORCH + H_SYNC))
         expected_hsync = 0 if is_hsync_active else 1
-        assert (dut.hsync.value == expected_hsync), f"hsync signal error on h={h}" 
+        assert (vga_sync.hsync.value == expected_hsync), f"hsync signal error on h={h}" 
 
         await RisingEdge(dut.clk)
 
-    assert (dut.h_count.value == 0), "h_count is not reset after a full horizontal length"
-    assert (dut.v_count.value == 1), "v_count is not summed with one"
+    assert (vga_sync.h_count.value == 0), "h_count is not reset after a full horizontal length"
+    assert (vga_sync.v_count.value == 1), "v_count is not summed with one"
 
     await ClockCycles(dut.clk, (V_TOTAL - 1) * H_TOTAL)
 
-    assert ( dut.h_count.value == 0), "h_count must be reset after one frame"
-    assert ( dut.v_count.value == 0), "v_count must be reset after one frame"
+    assert ( vga_sync.h_count.value == 0), "h_count must be reset after one frame"
+    assert ( vga_sync.v_count.value == 0), "v_count must be reset after one frame"
 
 
 

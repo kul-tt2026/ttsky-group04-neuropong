@@ -6,7 +6,7 @@ SIM             ?= icarus
 FST             ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG   ?= verilog
 SRC_DIR          = $(PWD)/../src
-PROJECT_SOURCES  = project.v VGA_sync.v pong.v render.v score_render.v
+PROJECT_SOURCES  = project.v VGA_sync.v pong_logic.v render.v score_render.v
 
 ifneq ($(GATES),yes)
 
@@ -39,7 +39,7 @@ VERILOG_SOURCES += $(PWD)/tb.v
 TOPLEVEL         = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test,test_VGA_sync
+COCOTB_TEST_MODULES = test_VGA_sync,test_score_render,test_render
 
 # Include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
