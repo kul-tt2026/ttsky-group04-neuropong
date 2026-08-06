@@ -1,7 +1,7 @@
 `ifndef HVSYNC
 `define HVSYNC
 
-module sync(clk, reset, h_count, v_count , hsync, vsync, draw_enable);
+module VGA_sync(clk, reset, h_count, v_count , hsync, vsync, draw_enable);
 
     // IO
     input wire clk;

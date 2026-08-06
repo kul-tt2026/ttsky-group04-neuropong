@@ -1,4 +1,4 @@
-module pong (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score);
+module pong_logic (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score);
     input wire clk;
     input wire reset;
 
