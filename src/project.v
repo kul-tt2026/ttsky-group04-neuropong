@@ -16,15 +16,12 @@ module tt_um_example (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  wire reset = ~rst_n;
-
   wire l_paddle_up = ui_in[0];
   wire l_paddle_down = ui_in[1];
-  wire r_paddle_up = ui_in[2];
-  wire r_paddle_down = ui_in[3];
+  wire game_reset = ui_in[4];   // player button to restart the game
 
-  // Unused inputs
-  wire _unused = &{ena, ui_in[7:4], uio_in, 1'b0};
+  // Unused inputs (the right paddle is driven by the neural net, ui_in[2:3] free)
+  wire _unused = &{ena, ui_in[7:5], ui_in[3:2], uio_in, 1'b0};
 
   assign uio_out = 8'b0000_0000;
   assign uio_oe = 8'b0000_0000;
@@ -42,8 +39,14 @@ module tt_um_example (
   wire [9:0] r_paddle_y;
   wire [9:0] ball_x;
   wire [9:0] ball_y;
+  wire       ball_dir_x;
+  wire       ball_dir_y;
   wire [3:0] l_score;
   wire [3:0] r_score;
+
+  // neural net opponent drives the right paddle
+  wire nn_paddle_up;
+  wire nn_paddle_down;
 
   wire [1:0] red;
   wire [1:0] green;
@@ -51,7 +54,7 @@ module tt_um_example (
 
   VGA_sync sync_inst (
       .clk        (clk),
-      .reset      (reset),
+      .reset_n    (rst_n),
       .h_count    (h_count),
       .v_count    (v_count),
       .hsync      (hsync),
@@ -61,22 +64,37 @@ module tt_um_example (
 
   pong_logic pong_inst (
       .clk          (clk),
-      .reset        (reset),
+      .reset_n      (rst_n),
+      .game_reset   (game_reset),
       .l_paddle_up  (l_paddle_up),
       .l_paddle_down(l_paddle_down),
-      .r_paddle_up  (r_paddle_up),
-      .r_paddle_down(r_paddle_down),
+      .r_paddle_up  (nn_paddle_up),
+      .r_paddle_down(nn_paddle_down),
       .l_paddle_y   (l_paddle_y),
       .r_paddle_y   (r_paddle_y),
       .ball_x       (ball_x),
       .ball_y       (ball_y),
+      .ball_dir_x   (ball_dir_x),
+      .ball_dir_y   (ball_dir_y),
       .l_score      (l_score),
       .r_score      (r_score)
   );
 
+  neural_net nn_inst (
+      .clk        (clk),
+      .reset_n    (rst_n),
+      .ball_x     (ball_x),
+      .ball_y     (ball_y),
+      .ball_dir_x (ball_dir_x),
+      .ball_dir_y (ball_dir_y),
+      .paddle_y   (r_paddle_y),
+      .paddle_up  (nn_paddle_up),
+      .paddle_down(nn_paddle_down)
+  );
+
   render render_inst (
       .clk        (clk),
-      .reset      (reset),
+      .reset_n    (rst_n),
       .h_count    (h_count),
       .v_count    (v_count),
       .draw_enable(draw_enable),
