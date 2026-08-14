@@ -1,8 +1,8 @@
-module render(clk, reset, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score, red, green, blue);
+module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score, red, green, blue);
 
     // IO
     input wire clk;
-    input wire reset;
+    input wire reset_n; // active low
 
     input wire [9:0] h_count;
     input wire [9:0] v_count;
@@ -40,7 +40,7 @@ module render(clk, reset, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y,
     );
     
     always @(posedge clk) begin
-        if (reset) begin
+        if (!reset_n) begin
             red <= 2'b00;
             green <= 2'b00;
             blue <= 2'b00;

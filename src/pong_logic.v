@@ -1,6 +1,7 @@
-module pong_logic (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score);
+module pong_logic (clk, reset_n, game_reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, ball_dir_x, ball_dir_y, l_score, r_score);
     input wire clk;
-    input wire reset;
+    input wire reset_n;     // active low, resets the whole chip
+    input wire game_reset;  // active high, restarts the game (scores + positions)
 
     input wire l_paddle_up;
     input wire l_paddle_down;
@@ -13,6 +14,9 @@ module pong_logic (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle
 
     output reg [9:0] ball_x;
     output reg [9:0] ball_y;
+
+    output reg ball_dir_x; // 1 => to left, 0 => to right
+    output reg ball_dir_y; // 1 => to top, 0 => to bottom
 
     output reg [3:0] l_score;
     output reg [3:0] r_score;
@@ -28,9 +32,6 @@ module pong_logic (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle
     parameter BALL_SPEED = 1;
     parameter PADDLE_SPEED = 1;
 
-    reg ball_dir_x = 0; // 1 => to left, 0 => to right
-    reg ball_dir_y = 0; // 1 => to top, 0 => to bottom
-
     wire [9:0] next_y_up = ball_y - BALL_SPEED;         // what next ball_y would be without boundries
     wire [9:0] next_y_down = ball_y + X + BALL_SPEED;
 
@@ -43,7 +44,8 @@ module pong_logic (clk, reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle
 
     always @(posedge clk) begin
 
-        if (reset) begin
+        // full chip reset or a player-triggered game restart
+        if (!reset_n || game_reset) begin
             l_paddle_y <= V_DISPLAY/2;
             r_paddle_y <= V_DISPLAY/2;
 

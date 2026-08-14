@@ -1,11 +1,11 @@
 `ifndef HVSYNC
 `define HVSYNC
 
-module VGA_sync(clk, reset, h_count, v_count , hsync, vsync, draw_enable);
+module VGA_sync(clk, reset_n, h_count, v_count , hsync, vsync, draw_enable);
 
     // IO
     input wire clk;
-    input wire reset;
+    input wire reset_n; // active low
     output reg[9:0] h_count; // 0-799
     output reg[9:0] v_count; // 0-524
     output wire hsync;
@@ -41,7 +41,7 @@ module VGA_sync(clk, reset, h_count, v_count , hsync, vsync, draw_enable);
 
     always @(posedge clk) begin
 
-        if (reset)begin
+        if (!reset_n)begin
             h_count <= 0;
             v_count <= 0;
 
