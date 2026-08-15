@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, RisingEdge
+from cocotb.triggers import ClockCycles, RisingEdge, Timer
 
 async def reset_dut(dut):
     dut.rst_n.value = 0
@@ -9,13 +9,17 @@ async def reset_dut(dut):
     await RisingEdge(dut.clk)
 
 async def set_vga_and_tick(dut, h, v):
-    # Set h_count and v_count
+    """Stelt de VGA-coördinaten in en geeft één kloktik voor de pipeline delay
+    van render.v (h_count/v_count zijn zelf vrijlopende tellers in VGA_sync,
+    dus we forceren ze hier telkens opnieuw vlak voor het samplen)."""
     render_inst = dut.user_project.render_inst
     render_inst.h_count.value = h
     render_inst.v_count.value = v
-
     await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
+    # laat NBA-updates van deze klokflank settelen zonder nog een echte
+    # klokflank te laten verlopen (die zou ball_x/ball_y in pong_logic
+    # verder laten bewegen)
+    await Timer(1, unit="step")
 
 @cocotb.test()
 async def test_render_logic(dut):
@@ -52,7 +56,14 @@ async def test_render_logic(dut):
     assert render_inst.green.value == 0b00, f"Background G must be 00, got {render_inst.green.value}"
     assert render_inst.blue.value == 0b00, f"Background B must be 00, got {render_inst.blue.value}"
 
-    # ball on (200,200) ==> White 
+    # -------------------------------------------------------------
+    # Scenario 3: Bal getekend (h=200, v=200 exact op bal pos) -> Wit
+    # -------------------------------------------------------------
+    # ball_x/ball_y zijn in werkelijkheid pong_logic's eigen registers en
+    # zijn intussen al enkele cycli opgeschoven door de bal-fysica; opnieuw
+    # forceren vlak voor het samplen zodat de bal echt op (200, 200) staat.
+    render_inst.ball_x.value = 200
+    render_inst.ball_y.value = 200
     await set_vga_and_tick(dut, 200, 200)
 
     assert render_inst.red.value == 0b11, f"Ball R must be 11, got {render_inst.red.value}"

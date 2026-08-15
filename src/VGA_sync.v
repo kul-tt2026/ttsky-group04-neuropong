@@ -11,7 +11,7 @@ module VGA_sync(clk, reset_n, h_count, v_count , hsync, vsync, draw_enable, fram
     output wire hsync;
     output wire vsync;
     output wire draw_enable;
-    output wire frame_tick;
+    output wire frame_tick; 
 
 
     // front, back porch and sync lengths
@@ -34,6 +34,7 @@ module VGA_sync(clk, reset_n, h_count, v_count , hsync, vsync, draw_enable, fram
 
     wire h_max = (h_count == H_SYNC_END + H_BACK_PORCH);
     wire v_max = (v_count == V_SYNC_END + V_BACK_PORCH);
+
 
     assign frame_tick = (v_count == V_DISPLAY && h_count == 0);
     assign draw_enable = (h_count < H_DISPLAY) && (v_count < V_DISPLAY);

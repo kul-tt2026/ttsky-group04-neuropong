@@ -87,7 +87,6 @@ module tt_um_neuropong (
       .clk        (clk),
       .reset_n    (rst_n),
       .frame_tick (frame_tick),
-      .ball_x     (ball_x),
       .ball_y     (ball_y),
       .ball_dir_x (ball_dir_x),
       .ball_dir_y (ball_dir_y),
