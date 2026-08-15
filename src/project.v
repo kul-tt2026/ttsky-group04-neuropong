@@ -61,7 +61,7 @@ module tt_um_neuropong (
       .hsync      (hsync),
       .vsync      (vsync),
       .draw_enable(draw_enable),
-      .frame_tick (frame_tick)
+      .frame_tick  (frame_tick)
   );
 
   pong_logic pong_inst (

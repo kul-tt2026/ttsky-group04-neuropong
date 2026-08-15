@@ -25,13 +25,12 @@ async def set_vga_and_tick(dut, h, v):
 async def test_render_logic(dut):
     dut._log.info("Start RENDER test")
 
-    clock = Clock(dut.clk, 40, unit="ns")
+    clock = Clock(dut.clk, 39.72, unit="ns")
     cocotb.start_soon(clock.start())
 
     await reset_dut(dut)
 
     render_inst = dut.user_project.render_inst
-
     render_inst.draw_enable.value = 1
     render_inst.l_paddle_y.value = 100
     render_inst.r_paddle_y.value = 100
