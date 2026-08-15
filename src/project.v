@@ -34,6 +34,7 @@ module tt_um_neuropong (
   wire       hsync;
   wire       vsync;
   wire       draw_enable;
+  wire       frame_tick;
 
   wire [9:0] l_paddle_y;
   wire [9:0] r_paddle_y;
@@ -59,13 +60,15 @@ module tt_um_neuropong (
       .v_count    (v_count),
       .hsync      (hsync),
       .vsync      (vsync),
-      .draw_enable(draw_enable)
+      .draw_enable(draw_enable),
+      .frame_tick (frame_tick)
   );
 
   pong_logic pong_inst (
       .clk          (clk),
       .reset_n      (rst_n),
       .game_reset   (game_reset),
+      .frame_tick   (frame_tick),
       .l_paddle_up  (l_paddle_up),
       .l_paddle_down(l_paddle_down),
       .r_paddle_up  (nn_paddle_up),
@@ -83,6 +86,7 @@ module tt_um_neuropong (
   neural_net nn_inst (
       .clk        (clk),
       .reset_n    (rst_n),
+      .frame_tick (frame_tick),
       .ball_y     (ball_y),
       .ball_dir_x (ball_dir_x),
       .ball_dir_y (ball_dir_y),

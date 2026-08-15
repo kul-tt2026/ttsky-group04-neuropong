@@ -1,7 +1,7 @@
 `ifndef HVSYNC
 `define HVSYNC
 
-module VGA_sync(clk, reset_n, h_count, v_count , hsync, vsync, draw_enable);
+module VGA_sync(clk, reset_n, h_count, v_count , hsync, vsync, draw_enable, frame_tick);
 
     // IO
     input wire clk;
@@ -11,6 +11,7 @@ module VGA_sync(clk, reset_n, h_count, v_count , hsync, vsync, draw_enable);
     output wire hsync;
     output wire vsync;
     output wire draw_enable;
+    output wire frame_tick; 
 
 
     // front, back porch and sync lengths
@@ -35,6 +36,7 @@ module VGA_sync(clk, reset_n, h_count, v_count , hsync, vsync, draw_enable);
     wire v_max = (v_count == V_SYNC_END + V_BACK_PORCH);
 
 
+    assign frame_tick = (v_count == V_DISPLAY && h_count == 0);
     assign draw_enable = (h_count < H_DISPLAY) && (v_count < V_DISPLAY);
     assign hsync = ~(H_SYNC_BEGIN <= h_count && H_SYNC_END >= h_count);
     assign vsync = ~(V_SYNC_BEGIN <= v_count && V_SYNC_END >= v_count);

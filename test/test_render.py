@@ -32,7 +32,6 @@ async def test_render_logic(dut):
 
     render_inst = dut.user_project.render_inst
 
-    # Enable rendering en stel posities in
     render_inst.draw_enable.value = 1
     render_inst.l_paddle_y.value = 100
     render_inst.r_paddle_y.value = 100
@@ -41,9 +40,7 @@ async def test_render_logic(dut):
     render_inst.l_score.value = 0
     render_inst.r_score.value = 0
 
-    # -------------------------------------------------------------
-    # Scenario 1: Geen draw_enable -> RGB moet 0 zijn
-    # -------------------------------------------------------------
+    # no draw_enable ==> black
     render_inst.draw_enable.value = 0
     await set_vga_and_tick(dut, 200, 200)
 
@@ -51,12 +48,9 @@ async def test_render_logic(dut):
     assert render_inst.green.value == 0, "G must be 0 when draw_enable=0"
     assert render_inst.blue.value == 0, "B must be 0 when draw_enable=0"
 
-    # Turn back on
     render_inst.draw_enable.value = 1
 
-    # -------------------------------------------------------------
-    # Scenario 2: Achtergrond (geen objecten op h=10, v=10) -> Zwart
-    # -------------------------------------------------------------
+    #black background on (10,10)
     await set_vga_and_tick(dut, 10, 10)
 
     assert render_inst.red.value == 0b00, f"Background R must be 00, got {render_inst.red.value}"
@@ -77,18 +71,14 @@ async def test_render_logic(dut):
     assert render_inst.green.value == 0b11, f"Ball G must be 11, got {render_inst.green.value}"
     assert render_inst.blue.value == 0b11, f"Ball B must be 11, got {render_inst.blue.value}"
 
-    # -------------------------------------------------------------
-    # Scenario 4: Linker paddle getekend -> Rood (11, 00, 00)
-    # -------------------------------------------------------------
+    # left paddle on (35,105) ==> Red
     await set_vga_and_tick(dut, 35, 105)
 
     assert render_inst.red.value == 0b11, f"Left paddle R must be 11, got {render_inst.red.value}"
     assert render_inst.green.value == 0b00, f"Left paddle G must be 00, got {render_inst.green.value}"
     assert render_inst.blue.value == 0b00, f"Left paddle B must be 00, got {render_inst.blue.value}"
 
-    # -------------------------------------------------------------
-    # Scenario 5: Rechter paddle getekend -> Blauw (00, 00, 11)
-    # -------------------------------------------------------------
+    # right paddle on (600,105) ==> Blue
     await set_vga_and_tick(dut, 600, 105)
 
     assert render_inst.red.value == 0b00, f"Right paddle R must be 00, got {render_inst.red.value}"

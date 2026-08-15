@@ -93,7 +93,7 @@ module neural_net (clk, reset_n, frame_tick, ball_y, ball_dir_x, ball_dir_y, pad
             if (out[0]) begin
                 paddle_up <= out[0];
                 paddle_down <= 0;
-            end else if (output[1]) begin
+            end else if (out[1]) begin
                 paddle_up <= 0; 
                 paddle_down <= out[1];
             end else begin 
