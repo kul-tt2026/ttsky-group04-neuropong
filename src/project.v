@@ -83,7 +83,6 @@ module tt_um_neuropong (
   neural_net nn_inst (
       .clk        (clk),
       .reset_n    (rst_n),
-      .ball_x     (ball_x),
       .ball_y     (ball_y),
       .ball_dir_x (ball_dir_x),
       .ball_dir_y (ball_dir_y),
