@@ -1,8 +1,9 @@
-module neural_net (clk, reset_n, ball_x, ball_y, ball_dir_x, ball_dir_y, paddle_y, paddle_up, paddle_down);
+module neural_net (clk, reset_n, frame_tick, ball_x, ball_y, ball_dir_x, ball_dir_y, paddle_y, paddle_up, paddle_down);
 
     // IO
     input wire clk;
     input wire reset_n;         // active low
+    input wire frame_tick;
 
     input wire [9:0] ball_x;
     input wire [9:0] ball_y;
@@ -70,7 +71,7 @@ module neural_net (clk, reset_n, ball_x, ball_y, ball_dir_x, ball_dir_y, paddle_
         if (!reset_n) begin
             paddle_up   <= 1'b0;
             paddle_down <= 1'b0;
-        end else begin
+        end else if (frame_tick) begin
             paddle_up   <= out[0];
             paddle_down <= out[1];
         end

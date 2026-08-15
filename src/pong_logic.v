@@ -1,7 +1,8 @@
-module pong_logic (clk, reset_n, game_reset, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, ball_dir_x, ball_dir_y, l_score, r_score);
+module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, ball_dir_x, ball_dir_y, l_score, r_score);
     input wire clk;
     input wire reset_n;     // active low, resets the whole chip
     input wire game_reset;  // active high, restarts the game (scores + positions)
+    input wire frame_tick;
 
     input wire l_paddle_up;
     input wire l_paddle_down;
@@ -58,7 +59,7 @@ module pong_logic (clk, reset_n, game_reset, l_paddle_up, l_paddle_down, r_paddl
             l_score <= 4'd0;
             r_score <= 4'd0;
 
-        end else begin
+        end else if (frame_tick) begin
 
             // top border collision
             if (top_hit) begin
