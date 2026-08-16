@@ -146,9 +146,11 @@ async def test_right_paddle_neural_net(dut):
     start_y = int(pong.r_paddle_y.value)
 
     assert start_y == V_DISPLAY // 2, f"Right paddle initial position must be {V_DISPLAY // 2}, got {start_y}"
-
+    pong.ball_x.value = 570
+    pong.ball_y.value = 440
     for _ in range(5):
         await wait_frame_tick(dut)
 
     end_y = int(pong.r_paddle_y.value)
     assert end_y != start_y, f"Right paddle should have moved, but is still at {pong.r_paddle_y.value}"
+    dut._log.info(f"{pong.r_paddle_y.value}")
