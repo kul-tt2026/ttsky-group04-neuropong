@@ -8,19 +8,21 @@ module paddle_reflection(ball_y, paddle_y, l_paddle_collision, r_paddle_collisio
     input wire l_paddle_collision;
     input wire r_paddle_collision;
 
-    output reg signed [3:0] reflection_vx;
-    output reg signed [3:0] reflection_vy;
+    output reg signed [9:0] reflection_vx;
+    output reg signed [9:0] reflection_vy;
 
 
     parameter [9:0] X = 15;
 
     reg [6:0] relative_position;
     reg [9:0] diff; // extra diff variable to avoid warning
-    reg signed [3:0] vx_abs;
+    reg signed [9:0] vx_abs;
 
     always @(*) begin
 
     /*
+
+    Absolute Speed is 7 px/frame
     
      vx   vy   relative_position   width 
      ───────────────────────────────────
