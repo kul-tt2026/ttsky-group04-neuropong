@@ -3,6 +3,14 @@
 This is a sample testbench for a Tiny Tapeout project. It uses [cocotb](https://docs.cocotb.org/en/stable/) to drive the DUT and check the outputs.
 For more information, check the [Tiny Tapeout website](https://tinytapeout.com/hdl/testing/).
 
+> **`test-neural-net` branch:** `tb.v` instantiates `neural_net` directly (instead of
+> the full `tt_um_neuropong` chip via `project.v`), and `PROJECT_SOURCES` / `COCOTB_TEST_MODULES`
+> in the `Makefile` point at `neural_net.v` / `test_neural_net.py` only. This lets
+> `test_neural_net.py` drive and check the neural net's own top-level ports directly,
+> without reaching into `project.v`'s internal instances (e.g. `dut.user_project.nn_inst`).
+> `GATES=yes` does not apply here since the hardened netlist's top level is the full chip,
+> not a standalone `neural_net`.
+
 ## Setting Up
 
 1. Edit the [Makefile](Makefile) and modify `PROJECT_SOURCES` to point to your Verilog files.

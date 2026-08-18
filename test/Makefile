@@ -6,18 +6,22 @@ SIM             ?= icarus
 FST             ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG   ?= verilog
 SRC_DIR          = $(PWD)/../src
-PROJECT_SOURCES  = project.v VGA_sync.v pong_logic.v render.v score_render.v neural_net.v
+# This branch hardens neural_net in isolation (see test/README.md), so only
+# its own source file is needed -- not the full tt_um_neuropong hierarchy.
+PROJECT_SOURCES  = neural_net.v
 
 ifneq ($(GATES),yes)
 
 # RTL simulation:
 SIM_BUILD        = sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
-VERILOG_SOURCES += $(PWD)/../src/VGA_sync.v
 
 else
 
 # Gate level simulation:
+# NOTE: gate_level_netlist.v is the hardened tt_um_neuropong (the full chip),
+# which has no standalone "neural_net" top -- GATES=yes does not apply on
+# this isolated-module branch.
 SIM_BUILD        = sim_build/gl
 PDK_PATH        := $(shell find $(PDK_ROOT) -maxdepth 5 -type d -name $(PDK) 2>/dev/null | head -1)
 COMPILE_ARGS    += -DGL_TEST
@@ -39,7 +43,7 @@ VERILOG_SOURCES += $(PWD)/tb.v
 TOPLEVEL         = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test
+COCOTB_TEST_MODULES = test_neural_net
 
 # Include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
