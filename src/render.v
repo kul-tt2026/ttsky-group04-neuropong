@@ -20,8 +20,11 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
     output reg [1:0] blue;
 
     parameter H_DISPLAY = 640;
+    parameter V_DISPLAY = 480;
+    parameter H_CENTER = H_DISPLAY / 2;
 
     parameter X = 15;
+    parameter DASH_SIZE = 20;
     parameter L_PADDLE_X = 2*X;
     parameter R_PADDLE_X = H_DISPLAY - 3*X;
 
@@ -29,7 +32,9 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
     wire l_paddle_in = (h_count >= L_PADDLE_X && h_count < L_PADDLE_X + X) && (v_count >= l_paddle_y && v_count < l_paddle_y + 5*X);
     wire r_paddle_in = (h_count >= R_PADDLE_X && h_count < R_PADDLE_X + X) && (v_count >= r_paddle_y && v_count < r_paddle_y + 5*X);
 
-    // kan nog eventueel in project.v
+    wire border_line = (h_count < 2)|| (h_count >= H_DISPLAY - 2) || (v_count < 2) || (v_count >= V_DISPLAY - 2);
+    wire center_line = (h_count >= H_CENTER - 1 && h_count <= H_CENTER + 1) && ((v_count / DASH_SIZE) % 2 == 0) && (v_count < V_DISPLAY);
+
     wire draw_score;
     score_render score_inst (
         .h_count(h_count),
@@ -52,6 +57,16 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
                     red <= 2'b11;
                     green <= 2'b11;
                     blue <= 2'b11;
+                // border line
+                end else if (border_line) begin
+                    red <= 2'b10;
+                    green <= 2'b10;
+                    blue <= 2'b10;
+                // center line
+                end else if (center_line) begin
+                    red <= 2'b10;
+                    green <= 2'b10;
+                    blue <= 2'b10;
                 // left paddle
                 end else if (l_paddle_in) begin
                     red <= 2'b11;

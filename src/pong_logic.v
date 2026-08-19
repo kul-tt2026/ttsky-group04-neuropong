@@ -33,6 +33,8 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
     parameter BALL_SPEED = 7;
     parameter PADDLE_SPEED = 5;
 
+    reg frame_phase = 1'b0;
+
     reg signed [9:0] ball_vx;
     reg signed [9:0] ball_vy;
 
@@ -68,19 +70,25 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
 
         // full chip reset or a player-triggered game restart
         if (!reset_n || game_reset) begin
-            l_paddle_y <= V_DISPLAY/2;
-            r_paddle_y <= V_DISPLAY/2;
+            l_paddle_y <= V_DISPLAY/2 - 3*X/2;
+            r_paddle_y <= V_DISPLAY/2 - 3*X/2;
 
-            ball_x <= H_DISPLAY/2;
-            ball_y <= V_DISPLAY/2;
+            ball_x <= H_DISPLAY/2 - X/2;
+            ball_y <= V_DISPLAY/2 - X/2;
 
-            ball_vx <= 10'sd2;
+            if (frame_phase) begin
+                ball_vx <= 10'sd3;
+            end else begin
+                ball_vx <= -10'sd3;
+            end
             ball_vy <= 10'sd2;
 
             l_score <= 4'd0;
             r_score <= 4'd0;
 
         end else if (frame_tick) begin
+
+            frame_phase <= ~frame_phase; // used for randomizing
 
         // Y-axis LOGIC
             // top border collision
@@ -105,13 +113,14 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
             // left border collision
             if (ball_x <= abs_ball_vx) begin        
                 ball_vx <= 10'sd3;               // give ball to the one who scored
-                ball_vy <= 10'sd1;
+                if (frame_phase) begin
+                    ball_vy <= 10'sd1;
+                end else begin
+                    ball_vy <= -10'sd1;
+                end
 
-                l_paddle_y <= V_DISPLAY/2;
-                r_paddle_y <= V_DISPLAY/2;
-
-                ball_x <= H_DISPLAY/2;
-                ball_y <= V_DISPLAY/2;
+                ball_x <= H_DISPLAY/2 - X/2;
+                ball_y <= V_DISPLAY/2 - X/2;
 
                 if (r_score == 4'd9) begin
                     l_score <= 4'd0;
@@ -123,13 +132,14 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
             // right border collision
             end else if (ball_x + X + abs_ball_vx >= H_DISPLAY) begin
                 ball_vx <= -10'sd3;              // give ball to the one who scored
-                ball_vy <= 10'sd1;
+                if (frame_phase) begin
+                    ball_vy <= 10'sd1;
+                end else begin
+                    ball_vy <= -10'sd1;
+                end
 
-                l_paddle_y <= V_DISPLAY/2;
-                r_paddle_y <= V_DISPLAY/2;
-
-                ball_x <= H_DISPLAY/2;
-                ball_y <= V_DISPLAY/2;
+                ball_x <= H_DISPLAY/2 - X/2;
+                ball_y <= V_DISPLAY/2 - X/2;
 
                 if (l_score == 4'd9) begin
                     l_score <= 4'd0;

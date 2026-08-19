@@ -3,8 +3,8 @@
 
 module paddle_reflection(ball_y, paddle_y, l_paddle_collision, r_paddle_collision, reflection_vx, reflection_vy);
     
-    input reg [9:0] ball_y;
-    input reg [9:0] paddle_y;
+    input wire [9:0] ball_y;
+    input wire [9:0] paddle_y;
     input wire l_paddle_collision;
     input wire r_paddle_collision;
 
@@ -26,13 +26,15 @@ module paddle_reflection(ball_y, paddle_y, l_paddle_collision, r_paddle_collisio
     
      vx   vy   relative_position   width 
      ───────────────────────────────────
-     +5   -5         1-12           12    
-     +6   -4        13-25           13    
-     +7   -2        26-38           13    
-     +7    0        39-51           13    
-     +7   +2        52-64           13    
-     +6   +4        65-77           13    
-     +5   +5        78-89           12    
+     +5   -5        1-8            8    
+     +6   -4        9-19           11    
+     +6   -3        20-31          12 
+     +7   -2        32-42          11   
+     +7    0        43-47          5    
+     +7   +2        48-58          11
+     +6   +3        59-70          12    
+     +6   +4        71-81          11    
+     +5   +5        82-89          8    
 
     */
 
@@ -46,31 +48,39 @@ module paddle_reflection(ball_y, paddle_y, l_paddle_collision, r_paddle_collisio
 
         
 
-        if (relative_position >= 1 && relative_position <= 12) begin
+        if (relative_position <= 8) begin
             vx_abs = 5;
             reflection_vy = -5;
         end
-        else if (relative_position >= 13 && relative_position <= 25) begin
+        else if (relative_position >= 9 && relative_position <= 19) begin
             vx_abs = 6;
             reflection_vy = -4;
         end
-        else if (relative_position >= 26 && relative_position <= 38) begin
+        else if (relative_position >= 20 && relative_position <= 31) begin
+            vx_abs = 6;
+            reflection_vy = -3;
+        end
+        else if (relative_position >= 32 && relative_position <= 42) begin
             vx_abs = 7;
             reflection_vy = -2;
         end
-        else if (relative_position >= 39 && relative_position <= 51) begin
+        else if (relative_position >= 43 && relative_position <= 47) begin
             vx_abs = 7;
             reflection_vy = 0;
         end
-        else if (relative_position >= 52 && relative_position <= 64) begin
+        else if (relative_position >= 48 && relative_position <= 58) begin
             vx_abs = 7;
             reflection_vy = +2;
         end
-        else if (relative_position >= 65 && relative_position <= 77) begin
+        else if (relative_position >= 59 && relative_position <= 70) begin
+            vx_abs = 6;
+            reflection_vy = +3;
+        end
+        else if (relative_position >= 71 && relative_position <= 81) begin
             vx_abs = 6;
             reflection_vy = +4;
         end
-        else if (relative_position >= 78 && relative_position <= 89) begin
+        else if (relative_position >= 82) begin
             vx_abs = 5;
             reflection_vy = +5;
         end

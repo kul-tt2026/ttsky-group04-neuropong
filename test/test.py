@@ -9,6 +9,7 @@ H_DISPLAY = 640
 V_DISPLAY = 480
 H_TOTAL = 800
 V_TOTAL = 525
+X = 15
 
 async def reset_dut(dut):
     dut.ena.value = 1
@@ -51,8 +52,8 @@ async def test_reset_state(dut):
     pong = dut.user_project.pong_inst
     assert pong.l_score.value == 0, f"l_score must be 0 after reset, got {pong.l_score.value}"
     assert pong.r_score.value == 0, f"r_score must be 0 after reset, got {pong.r_score.value}"
-    assert pong.ball_x.value == H_DISPLAY // 2, f"ball_x must be {H_DISPLAY // 2} after reset, got {pong.ball_x.value}"
-    assert pong.ball_y.value == V_DISPLAY // 2, f"ball_y must be {V_DISPLAY // 2} after reset, got {pong.ball_y.value}"
+    assert pong.ball_x.value == H_DISPLAY // 2 - X // 2, f"ball_x must be {H_DISPLAY // 2 - X // 2} after reset, got {pong.ball_x.value}"
+    assert pong.ball_y.value == V_DISPLAY // 2 - X // 2, f"ball_y must be {V_DISPLAY // 2 - X // 2} after reset, got {pong.ball_y.value}"
 
 @cocotb.test()
 async def test_no_unknown_outputs(dut):
@@ -108,7 +109,7 @@ async def test_left_paddle_movement(dut):
     pong = dut.user_project.pong_inst
     start_y = int(pong.l_paddle_y.value)
 
-    assert start_y == V_DISPLAY // 2, f"Left paddle initial position must be {V_DISPLAY // 2}, got {start_y}"
+    assert start_y == V_DISPLAY // 2 - (3*X // 2), f"Left paddle initial position must be {V_DISPLAY // 2 - (3*X // 2)}, got {start_y}"
 
     dut.ui_in.value = 0b0000_0010 # move left paddle down
     await wait_frame_tick(dut)
@@ -125,13 +126,13 @@ async def test_game_reset(dut):
     pong = dut.user_project.pong_inst
     dut.ui_in.value = 0b0000_0010 # move left paddle down
     await wait_frame_tick(dut)
-    assert int(pong.l_paddle_y.value) != V_DISPLAY // 2, f"Left paddle should have moved down, but is at {pong.l_paddle_y.value}"
+    assert int(pong.l_paddle_y.value) != V_DISPLAY // 2 - (3*X // 2), f"Left paddle should have moved down, but is at {pong.l_paddle_y.value}"
 
     dut.ui_in.value = 0b0001_0000 # game reset
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
-    assert int(pong.l_paddle_y.value) == V_DISPLAY // 2, f"Left paddle should have reset to {V_DISPLAY // 2}, but is at {pong.l_paddle_y.value}"
+    assert int(pong.l_paddle_y.value) == V_DISPLAY // 2 - (3*X // 2), f"Left paddle should have reset to {V_DISPLAY // 2 - (3*X // 2)}, but is at {pong.l_paddle_y.value}"
     assert int(pong.l_score.value) == 0, f"Left score should have reset to 0, but is at {pong.l_score.value}"
     assert int(pong.r_score.value) == 0, f"Right score should have reset to 0, but is at {pong.r_score.value}"
 
@@ -145,7 +146,7 @@ async def test_right_paddle_neural_net(dut):
     pong = dut.user_project.pong_inst
     start_y = int(pong.r_paddle_y.value)
 
-    assert start_y == V_DISPLAY // 2, f"Right paddle initial position must be {V_DISPLAY // 2}, got {start_y}"
+    assert start_y == V_DISPLAY // 2 - (3*X // 2), f"Right paddle initial position must be {V_DISPLAY // 2 - (3*X // 2)}, got {start_y}"
     pong.ball_x.value = 570
     pong.ball_y.value = 440
     for _ in range(5):
