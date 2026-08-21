@@ -44,6 +44,8 @@ module tt_um_neuropong (
   wire       ball_dir_y;
   wire [3:0] l_score;
   wire [3:0] r_score;
+  wire       winner;
+  wire       game_over;    
 
   // neural net opponent drives the right paddle
   wire nn_paddle_up;
@@ -80,7 +82,9 @@ module tt_um_neuropong (
       .ball_dir_x   (ball_dir_x),
       .ball_dir_y   (ball_dir_y),
       .l_score      (l_score),
-      .r_score      (r_score)
+      .r_score      (r_score),
+      .winner       (winner),
+      .game_over    (game_over)
   );
 
   neural_net nn_inst (
@@ -107,6 +111,8 @@ module tt_um_neuropong (
       .ball_y     (ball_y),
       .l_score    (l_score),
       .r_score    (r_score),
+      .winner     (winner),
+      .game_over  (game_over),
       .red        (red),
       .green      (green),
       .blue       (blue)

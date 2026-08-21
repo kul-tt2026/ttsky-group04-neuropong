@@ -1,4 +1,4 @@
-module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, ball_dir_x, ball_dir_y, l_score, r_score);
+module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_down, r_paddle_up, r_paddle_down, l_paddle_y, r_paddle_y, ball_x, ball_y, ball_dir_x, ball_dir_y, l_score, r_score, winner, game_over);
     input wire clk;
     input wire reset_n;     // active low, resets the whole chip
     input wire game_reset;  // active high, restarts the game (scores + positions)
@@ -16,11 +16,14 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
     output reg [9:0] ball_x;
     output reg [9:0] ball_y;
 
-    output reg ball_dir_x; // 1 => to left, 0 => to right
-    output reg ball_dir_y; // 1 => to top, 0 => to bottom
+    output wire ball_dir_x; // 1 => to left, 0 => to right
+    output wire ball_dir_y; // 1 => to top, 0 => to bottom
 
     output reg [3:0] l_score;
     output reg [3:0] r_score;
+
+    output reg winner; // 0 => left player won, 1 => right player won
+    output reg game_over;
 
     parameter V_DISPLAY = 480;
     parameter H_DISPLAY = 640;
@@ -30,10 +33,13 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
     parameter R_PADDLE_X = H_DISPLAY - 3*X;
     parameter PADDLE_HEIGHT = 5*X;
 
-    parameter BALL_SPEED = 7;
     parameter PADDLE_SPEED = 5;
 
-    reg frame_phase = 1'b0;
+    parameter GAME_OVER_FRAMES = 180; // 3 seconds
+
+    reg [7:0] pause_counter;
+
+    reg frame_phase;
 
     reg signed [9:0] ball_vx;
     reg signed [9:0] ball_vy;
@@ -82,127 +88,152 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
                 ball_vx <= -10'sd3;
             end
             ball_vy <= 10'sd2;
+            pause_counter <= 8'b0;
+            game_over <= 1'b0;
 
             l_score <= 4'd0;
             r_score <= 4'd0;
 
         end else if (frame_tick) begin
 
-            frame_phase <= ~frame_phase; // used for randomizing
+            if (game_over) begin
+                if (pause_counter == GAME_OVER_FRAMES) begin
+                    l_paddle_y <= V_DISPLAY/2 - 3*X/2;
+                    r_paddle_y <= V_DISPLAY/2 - 3*X/2;
 
-        // Y-axis LOGIC
-            // top border collision
-            if (top_hit) begin
-                ball_vy <= -ball_vy;
-                ball_y <= abs_ball_vy - ball_y;      // rebounce of border
+                    ball_x <= H_DISPLAY/2 - X/2;
+                    ball_y <= V_DISPLAY/2 - X/2;
 
-            // bottom border collision
-            end else if (bottom_hit) begin
-                ball_vy <= -ball_vy;
-                ball_y <= (V_DISPLAY - X) - ((ball_y + X + abs_ball_vy) - V_DISPLAY); // rebounce of border
-            
-            // NO top/bottom collision
-            end else if (ball_dir_y == 1) begin
-                ball_y <= ball_y + ball_vy;
+                    if (frame_phase) begin
+                        ball_vx <= 10'sd3;
+                    end else begin
+                        ball_vx <= -10'sd3;
+                    end
+                    ball_vy <= 10'sd2;
 
+                    l_score <= 4'd0;
+                    r_score <= 4'd0;
+                    game_over <= 1'b0;
+                    pause_counter <= 8'b0;
+
+                end else begin
+                    pause_counter <= pause_counter + 1;
+                end
             end else begin
-                ball_y <= ball_y + ball_vy;
-            end
 
-        // X-axis LOGIC
-            // left border collision
-            if (ball_x <= abs_ball_vx) begin        
-                ball_vx <= 10'sd3;               // give ball to the one who scored
-                if (frame_phase) begin
-                    ball_vy <= 10'sd1;
+                frame_phase <= ~frame_phase; // used for randomizing
+
+            // Y-axis LOGIC
+                // top border collision
+                if (top_hit) begin
+                    ball_vy <= -ball_vy;
+                    ball_y <= abs_ball_vy - ball_y;      // rebounce of border
+
+                // bottom border collision
+                end else if (bottom_hit) begin
+                    ball_vy <= -ball_vy;
+                    ball_y <= (V_DISPLAY - X) - ((ball_y + X + abs_ball_vy) - V_DISPLAY); // rebounce of border
+                
+                // NO top/bottom collision
+                end else if (ball_dir_y == 1) begin
+                    ball_y <= ball_y + ball_vy;
+
                 end else begin
-                    ball_vy <= -10'sd1;
+                    ball_y <= ball_y + ball_vy;
                 end
 
-                ball_x <= H_DISPLAY/2 - X/2;
-                ball_y <= V_DISPLAY/2 - X/2;
+            // X-axis LOGIC
+                // left border collision
+                if (ball_x <= abs_ball_vx) begin        
+                    ball_vx <= 10'sd3;               // give ball to the one who scored
+                    if (frame_phase) begin
+                        ball_vy <= 10'sd1;
+                    end else begin
+                        ball_vy <= -10'sd1;
+                    end
 
-                if (r_score == 4'd9) begin
-                    l_score <= 4'd0;
-                    r_score <= 4'd0;
-                end else begin
-                    r_score <= r_score + 1;
-                end
+                    ball_x <= H_DISPLAY/2 - X/2;
+                    ball_y <= V_DISPLAY/2 - X/2;
 
-            // right border collision
-            end else if (ball_x + X + abs_ball_vx >= H_DISPLAY) begin
-                ball_vx <= -10'sd3;              // give ball to the one who scored
-                if (frame_phase) begin
-                    ball_vy <= 10'sd1;
-                end else begin
-                    ball_vy <= -10'sd1;
-                end
+                    if (r_score == 4'd9) begin
+                        winner <= 1'b1; // right player won
+                        game_over <= 1'b1;
+                    end else begin
+                        r_score <= r_score + 1;
+                    end
 
-                ball_x <= H_DISPLAY/2 - X/2;
-                ball_y <= V_DISPLAY/2 - X/2;
+                // right border collision
+                end else if (ball_x + X + abs_ball_vx >= H_DISPLAY) begin
+                    ball_vx <= -10'sd3;              // give ball to the one who scored
+                    if (frame_phase) begin
+                        ball_vy <= 10'sd1;
+                    end else begin
+                        ball_vy <= -10'sd1;
+                    end
 
-                if (l_score == 4'd9) begin
-                    l_score <= 4'd0;
-                    r_score <= 4'd0;
-                end else begin
-                    l_score <= l_score + 1;
-                end
+                    ball_x <= H_DISPLAY/2 - X/2;
+                    ball_y <= V_DISPLAY/2 - X/2;
 
-            // left paddle collision
-            end else if (l_paddle_hit)  begin
+                    if (l_score == 4'd9) begin
+                        winner <= 1'b0; // left player won
+                        game_over <= 1'b1;
+                    end else begin
+                        l_score <= l_score + 1;
+                    end
+
+                // left paddle collision
+                end else if (l_paddle_hit)  begin
+                        ball_vx <= reflection_vx;
+                        ball_vy <= reflection_vy;
+                        ball_x <= L_PADDLE_X + X;
+
+                // right paddle collision
+                end else if (r_paddle_hit) begin
                     ball_vx <= reflection_vx;
                     ball_vy <= reflection_vy;
-                    ball_x <= L_PADDLE_X + X;
+                    ball_x <= R_PADDLE_X - X;
 
-            // right paddle collision
-            end else if (r_paddle_hit) begin
-                ball_vx <= reflection_vx;
-                ball_vy <= reflection_vy;
-                ball_x <= R_PADDLE_X - X;
-
-            // NO paddle collision
-            end else if (ball_dir_x == 0) begin
-                ball_x <= ball_x + abs_ball_vx;
-            end else begin
-                ball_x <= ball_x - abs_ball_vx;
-            end
-
-        // Paddle movement LOGIC
-
-            // left paddle movement
-            if (l_paddle_down && !l_paddle_up) begin
-                if (l_paddle_y + PADDLE_HEIGHT + PADDLE_SPEED <= V_DISPLAY) begin
-                    l_paddle_y <= l_paddle_y + PADDLE_SPEED;
+                // NO paddle collision
+                end else if (ball_dir_x == 0) begin
+                    ball_x <= ball_x + abs_ball_vx;
                 end else begin
-                    l_paddle_y <= V_DISPLAY - PADDLE_HEIGHT; // paddle almost at bottom ==> set paddle at bottom
+                    ball_x <= ball_x - abs_ball_vx;
                 end
 
-            end else if (!l_paddle_down && l_paddle_up) begin
-                if (l_paddle_y >= PADDLE_SPEED) begin
-                    l_paddle_y <= l_paddle_y - PADDLE_SPEED;
-                end else begin
-                    l_paddle_y <= 0;
-                end
-            end
+            // Paddle movement LOGIC
 
-            // right paddle movement
-            if (r_paddle_down && !r_paddle_up) begin
-                if (r_paddle_y + PADDLE_HEIGHT + PADDLE_SPEED <= V_DISPLAY) begin // if not beyond the border
-                    r_paddle_y <= r_paddle_y + PADDLE_SPEED;
-                end else begin
-                    r_paddle_y <= V_DISPLAY - PADDLE_HEIGHT; // set against bottom border
+                // left paddle movement
+                if (l_paddle_down && !l_paddle_up) begin
+                    if (l_paddle_y + PADDLE_HEIGHT + PADDLE_SPEED <= V_DISPLAY) begin
+                        l_paddle_y <= l_paddle_y + PADDLE_SPEED;
+                    end else begin
+                        l_paddle_y <= V_DISPLAY - PADDLE_HEIGHT; // paddle almost at bottom ==> set paddle at bottom
+                    end
+
+                end else if (!l_paddle_down && l_paddle_up) begin
+                    if (l_paddle_y >= PADDLE_SPEED) begin
+                        l_paddle_y <= l_paddle_y - PADDLE_SPEED;
+                    end else begin
+                        l_paddle_y <= 0;
+                    end
                 end
 
-            end else if (!r_paddle_down && r_paddle_up) begin
-                if (r_paddle_y >= PADDLE_SPEED) begin
-                    r_paddle_y <= r_paddle_y - PADDLE_SPEED;
-                end else begin
-                    r_paddle_y <= 0;
+                // right paddle movement
+                if (r_paddle_down && !r_paddle_up) begin
+                    if (r_paddle_y + PADDLE_HEIGHT + PADDLE_SPEED <= V_DISPLAY) begin // if not beyond the border
+                        r_paddle_y <= r_paddle_y + PADDLE_SPEED;
+                    end else begin
+                        r_paddle_y <= V_DISPLAY - PADDLE_HEIGHT; // set against bottom border
+                    end
+
+                end else if (!r_paddle_down && r_paddle_up) begin
+                    if (r_paddle_y >= PADDLE_SPEED) begin
+                        r_paddle_y <= r_paddle_y - PADDLE_SPEED;
+                    end else begin
+                        r_paddle_y <= 0;
+                    end
                 end
             end
-
-
-
         end
     end
 endmodule

@@ -23,6 +23,8 @@ project:
     - "render.v"
     - "score_render.v"
     - "neural_net.v"
+    - "paddle_reflection.v"
+    - "wins_render.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).

@@ -1,4 +1,4 @@
-module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score, red, green, blue);
+module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_y, ball_x, ball_y, l_score, r_score, winner, game_over, red, green, blue);
 
     // IO
     input wire clk;
@@ -14,6 +14,8 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
     input wire [9:0] ball_y;
     input wire [3:0] l_score;
     input wire [3:0] r_score;
+    input wire winner;
+    input wire game_over;
 
     output reg [1:0] red;
     output reg [1:0] green;
@@ -43,6 +45,13 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
         .r_score(r_score),
         .draw_score(draw_score)
     );
+
+    wire draw_wins;
+    wins_render wins_inst (
+        .h_count(h_count),
+        .v_count(v_count),
+        .draw_wins(draw_wins)
+    );
     
     always @(posedge clk) begin
         if (!reset_n) begin
@@ -52,49 +61,67 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
 
         end else begin
             if (draw_enable) begin
-                // ball
-                if (ball_in) begin
-                    red <= 2'b11;
-                    green <= 2'b11;
-                    blue <= 2'b11;
-                // border line
-                end else if (border_line) begin
-                    red <= 2'b10;
-                    green <= 2'b10;
-                    blue <= 2'b10;
-                // center line
-                end else if (center_line) begin
-                    red <= 2'b10;
-                    green <= 2'b10;
-                    blue <= 2'b10;
-                // left paddle
-                end else if (l_paddle_in) begin
-                    red <= 2'b11;
-                    green <= 2'b00;
-                    blue <= 2'b00;
-                // right paddle
-                end else if (r_paddle_in) begin
-                    red <= 2'b00;
-                    green <= 2'b00;
-                    blue <= 2'b11;
-                // scores
-                end else if (draw_score) begin
-                    red <= 2'b10;
-                    green <= 2'b10;
-                    blue <= 2'b10;
-                // background
+                if (game_over) begin
+                    if (draw_wins) begin
+                        red <= 2'b11;
+                        green <= 2'b11;
+                        blue <= 2'b11;
+                    end else if (winner) begin
+                        // right player won
+                        red <= 2'b00;
+                        green <= 2'b00;
+                        blue <= 2'b11;
+                    end else begin
+                        // left player won
+                        red <= 2'b11;
+                        green <= 2'b00;
+                        blue <= 2'b00;
+                    end
+                end else begin
+                    // ball
+                    if (ball_in) begin
+                        red <= 2'b11;
+                        green <= 2'b11;
+                        blue <= 2'b11;
+                    // border line
+                    end else if (border_line) begin
+                        red <= 2'b10;
+                        green <= 2'b10;
+                        blue <= 2'b10;
+                    // center line
+                    end else if (center_line) begin
+                        red <= 2'b10;
+                        green <= 2'b10;
+                        blue <= 2'b10;
+                    // left paddle
+                    end else if (l_paddle_in) begin
+                        red <= 2'b11;
+                        green <= 2'b00;
+                        blue <= 2'b00;
+                    // right paddle
+                    end else if (r_paddle_in) begin
+                        red <= 2'b00;
+                        green <= 2'b00;
+                        blue <= 2'b11;
+                    // scores
+                    end else if (draw_score) begin
+                        red <= 2'b10;
+                        green <= 2'b10;
+                        blue <= 2'b10;
+                    // background
+                    end else begin
+                        red <= 2'b00;
+                        green <= 2'b00;
+                        blue <= 2'b00;
+                    end
+                end
                 end else begin
                     red <= 2'b00;
                     green <= 2'b00;
                     blue <= 2'b00;
                 end
-            end else begin
-                red <= 2'b00;
-                green <= 2'b00;
-                blue <= 2'b00;
             end
         end
-    end
 
 
 endmodule
