@@ -53,6 +53,17 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
     wire l_paddle_hit = (ball_vx < 0) && (ball_x <= L_PADDLE_X + X + abs_ball_vx && ball_x + X >= L_PADDLE_X) && (ball_y + X >= l_paddle_y && ball_y < l_paddle_y + PADDLE_HEIGHT);
     wire r_paddle_hit = (ball_vx > 0) && (ball_x <= R_PADDLE_X + X && ball_x + X + abs_ball_vx >= R_PADDLE_X) && (ball_y + X >= r_paddle_y && ball_y < r_paddle_y + PADDLE_HEIGHT);
 
+    wire [9:0] pred_x = ball_x + ball_vx;
+    wire [9:0] pred_y = ball_y + ball_vy;
+
+    wire [9:0] l_x_overlap = (pred_x + X < L_PADDLE_X + X ? pred_x + X : L_PADDLE_X + X) - (pred_x > L_PADDLE_X ? pred_x : L_PADDLE_X);
+    wire [9:0] l_y_overlap = (pred_y + X < l_paddle_y + PADDLE_HEIGHT ? pred_y + X : l_paddle_y + PADDLE_HEIGHT) - (pred_y > l_paddle_y ? pred_y : l_paddle_y);
+    wire l_front_hit = (l_x_overlap <= l_y_overlap); // checks which part of the paddle is hit
+ 
+    wire [9:0] r_x_overlap = (pred_x + X < R_PADDLE_X + X ? pred_x + X : R_PADDLE_X + X) - (pred_x > R_PADDLE_X ? pred_x : R_PADDLE_X);
+    wire [9:0] r_y_overlap = (pred_y + X < r_paddle_y + PADDLE_HEIGHT ? pred_y + X : r_paddle_y + PADDLE_HEIGHT) - (pred_y > r_paddle_y ? pred_y : r_paddle_y);
+    wire r_front_hit = (r_x_overlap <= r_y_overlap);
+
     assign ball_dir_x = ball_vx[9]; // msb decides the sign
     assign ball_dir_y = ball_vy[9]; 
 
@@ -115,6 +126,7 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
                     r_score <= 4'd0;
                     game_over <= 1'b0;
                     pause_counter <= 8'b0;
+                    winner <= 1'b0;
 
                 end else begin
                     pause_counter <= pause_counter + 1;
@@ -135,9 +147,6 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
                     ball_y <= (V_DISPLAY - X) - ((ball_y + X + abs_ball_vy) - V_DISPLAY); // rebounce of border
                 
                 // NO top/bottom collision
-                end else if (ball_dir_y == 1) begin
-                    ball_y <= ball_y + ball_vy;
-
                 end else begin
                     ball_y <= ball_y + ball_vy;
                 end
@@ -185,13 +194,28 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
                 end else if (l_paddle_hit)  begin
                         ball_vx <= reflection_vx;
                         ball_vy <= reflection_vy;
-                        ball_x <= L_PADDLE_X + X;
 
+                        if (l_front_hit) begin
+                            ball_x <= L_PADDLE_X + X;
+                        end else if (pred_y < l_paddle_y) begin
+                            ball_y <= l_paddle_y - X;
+                        end else begin
+                            ball_y <= l_paddle_y + PADDLE_HEIGHT;
+                        end
+                    
                 // right paddle collision
                 end else if (r_paddle_hit) begin
                     ball_vx <= reflection_vx;
                     ball_vy <= reflection_vy;
-                    ball_x <= R_PADDLE_X - X;
+
+                    if (r_front_hit) begin
+                            ball_x <= R_PADDLE_X - X;
+                    end else if (pred_y < r_paddle_y) begin
+                        ball_y <= r_paddle_y - X;
+                    end else begin
+                        ball_y <= r_paddle_y + PADDLE_HEIGHT;
+                    end
+                    
 
                 // NO paddle collision
                 end else if (ball_dir_x == 0) begin
