@@ -93,14 +93,13 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
             ball_x <= H_DISPLAY/2 - X/2;
             ball_y <= V_DISPLAY/2 - X/2;
 
-            if (frame_phase) begin
-                ball_vx <= 10'sd3;
-            end else begin
-                ball_vx <= -10'sd3;
-            end
+            ball_vx <= -10'sd3;
             ball_vy <= 10'sd2;
             pause_counter <= 8'b0;
             game_over <= 1'b0;
+            winner <= 1'b0;
+
+            frame_phase <= 1'b0;
 
             l_score <= 4'd0;
             r_score <= 4'd0;
