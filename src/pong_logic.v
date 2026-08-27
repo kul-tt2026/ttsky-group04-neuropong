@@ -41,6 +41,9 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
 
     reg frame_phase;
 
+    reg l_paddle_hit, r_paddle_hit;
+    reg l_front_hit,  r_front_hit;
+
     reg signed [9:0] ball_vx;
     reg signed [9:0] ball_vy;
 
@@ -50,19 +53,14 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
     wire top_hit = (ball_y <= abs_ball_vy && ball_vy < 0);
     wire bottom_hit = (ball_y + X + abs_ball_vy >= V_DISPLAY && ball_vy > 0);
 
-    wire l_paddle_hit = (ball_vx < 0) && (ball_x <= L_PADDLE_X + X + abs_ball_vx && ball_x + X >= L_PADDLE_X) && (ball_y + X >= l_paddle_y && ball_y < l_paddle_y + PADDLE_HEIGHT);
-    wire r_paddle_hit = (ball_vx > 0) && (ball_x <= R_PADDLE_X + X && ball_x + X + abs_ball_vx >= R_PADDLE_X) && (ball_y + X >= r_paddle_y && ball_y < r_paddle_y + PADDLE_HEIGHT);
-
     wire [9:0] pred_x = ball_x + ball_vx;
     wire [9:0] pred_y = ball_y + ball_vy;
 
     wire [9:0] l_x_overlap = (pred_x + X < L_PADDLE_X + X ? pred_x + X : L_PADDLE_X + X) - (pred_x > L_PADDLE_X ? pred_x : L_PADDLE_X);
     wire [9:0] l_y_overlap = (pred_y + X < l_paddle_y + PADDLE_HEIGHT ? pred_y + X : l_paddle_y + PADDLE_HEIGHT) - (pred_y > l_paddle_y ? pred_y : l_paddle_y);
-    wire l_front_hit = (l_x_overlap <= l_y_overlap); // checks which part of the paddle is hit
  
     wire [9:0] r_x_overlap = (pred_x + X < R_PADDLE_X + X ? pred_x + X : R_PADDLE_X + X) - (pred_x > R_PADDLE_X ? pred_x : R_PADDLE_X);
     wire [9:0] r_y_overlap = (pred_y + X < r_paddle_y + PADDLE_HEIGHT ? pred_y + X : r_paddle_y + PADDLE_HEIGHT) - (pred_y > r_paddle_y ? pred_y : r_paddle_y);
-    wire r_front_hit = (r_x_overlap <= r_y_overlap);
 
     assign ball_dir_x = ball_vx[9]; // msb decides the sign
     assign ball_dir_y = ball_vy[9]; 
@@ -83,6 +81,28 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
     );
 
 
+    // Pipeline: check for collisions (sequential)
+    always @(posedge clk) begin
+        if (!reset_n || game_reset) begin
+            l_paddle_hit <= 1'b0;
+            r_paddle_hit <= 1'b0;
+            l_front_hit  <= 1'b0;
+            r_front_hit  <= 1'b0;
+        end else begin
+            l_paddle_hit <= (ball_vx < 0) && 
+                            (ball_x <= L_PADDLE_X + X + abs_ball_vx && ball_x + X >= L_PADDLE_X) && 
+                            (ball_y + X >= l_paddle_y && ball_y < l_paddle_y + PADDLE_HEIGHT);
+
+            r_paddle_hit <= (ball_vx > 0) && 
+                            (ball_x <= R_PADDLE_X + X && ball_x + X + abs_ball_vx >= R_PADDLE_X) && 
+                            (ball_y + X >= r_paddle_y && ball_y < r_paddle_y + PADDLE_HEIGHT);
+
+            l_front_hit  <= (l_x_overlap <= l_y_overlap);
+            r_front_hit  <= (r_x_overlap <= r_y_overlap);
+        end
+    end
+
+
     always @(posedge clk) begin
 
         // full chip reset or a player-triggered game restart
@@ -93,14 +113,13 @@ module pong_logic (clk, reset_n, game_reset, frame_tick, l_paddle_up, l_paddle_d
             ball_x <= H_DISPLAY/2 - X/2;
             ball_y <= V_DISPLAY/2 - X/2;
 
-            if (frame_phase) begin
-                ball_vx <= 10'sd3;
-            end else begin
-                ball_vx <= -10'sd3;
-            end
+            ball_vx <= -10'sd3;
             ball_vy <= 10'sd2;
             pause_counter <= 8'b0;
             game_over <= 1'b0;
+            winner <= 1'b0;
+
+            frame_phase <= 1'b0;
 
             l_score <= 4'd0;
             r_score <= 4'd0;
