@@ -18,10 +18,13 @@ module tt_um_neuropong (
 
   wire l_paddle_up = ui_in[0];
   wire l_paddle_down = ui_in[1];
+  wire player_r_paddle_up = ui_in[2];
+  wire player_r_paddle_down = ui_in[3];
   wire game_reset = ui_in[4];   // player button to restart the game
+  wire r_player_enable = ui_in[5];
 
   // Unused inputs (the right paddle is driven by the neural net, ui_in[2:3] free)
-  wire _unused = &{ena, ui_in[7:5], ui_in[3:2], uio_in, 1'b0};
+  wire _unused = &{ena, ui_in[7:6], uio_in, 1'b0};
 
   assign uio_out = 8'b0000_0000;
   assign uio_oe = 8'b0000_0000;
@@ -55,6 +58,13 @@ module tt_um_neuropong (
   wire [1:0] green;
   wire [1:0] blue;
 
+  wire r_paddle_up;
+  wire r_paddle_down;
+
+  assign r_paddle_up   = r_player_enable ? player_r_paddle_up   : nn_paddle_up;
+  assign r_paddle_down = r_player_enable ? player_r_paddle_down : nn_paddle_down;
+
+
   VGA_sync sync_inst (
       .clk        (clk),
       .reset_n    (rst_n),
@@ -73,8 +83,8 @@ module tt_um_neuropong (
       .frame_tick   (frame_tick),
       .l_paddle_up  (l_paddle_up),
       .l_paddle_down(l_paddle_down),
-      .r_paddle_up  (nn_paddle_up),
-      .r_paddle_down(nn_paddle_down),
+      .r_paddle_up  (r_paddle_up),
+      .r_paddle_down(r_paddle_down),
       .l_paddle_y   (l_paddle_y),
       .r_paddle_y   (r_paddle_y),
       .ball_x       (ball_x),

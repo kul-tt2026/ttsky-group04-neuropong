@@ -32,10 +32,10 @@ pinout:
   # Inputs
   ui[0]: "L_PDL_UP"
   ui[1]: "L_PDL_DOWN"
-  ui[2]: ""
-  ui[3]: ""
+  ui[2]: "R_PDL_UP"
+  ui[3]: "R_PDL_DOWN"
   ui[4]: "GAME_RESET"
-  ui[5]: ""
+  ui[5]: "R_PLAYER_ENABLE"
   ui[6]: ""
   ui[7]: ""
 
