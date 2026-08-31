@@ -225,35 +225,105 @@ async def test_game_reset(dut):
     color = await sample_pixel(dut, cursor, top_h, top_v)
     assert color == RED, f"Left paddle should have reset to its centered position, got {color}"
 
-"""Takes too long"""
-# @cocotb.test()
-# async def test_right_paddle_neural_net(dut):
-#     dut._log.info("Start right paddle neural net test")
-#     start_clock(dut)
-#     cursor = await reset_dut(dut)
 
-#     h = R_PADDLE_X + 5
-#     top_v = V_DISPLAY // 2
-#     bot_v = V_DISPLAY // 2 + PADDLE_HEIGHT - 1
+@cocotb.test()
+async def test_right_paddle_neural_net(dut):
+    dut._log.info("Start right paddle neural net test")
+    start_clock(dut)
+    cursor = await reset_dut(dut)
 
-#     top_before = await sample_pixel(dut, cursor, h, top_v)
-#     bot_before = await sample_pixel(dut, cursor, h, bot_v)
-#     assert top_before == BLUE, f"Expected right paddle at its top edge, got {top_before}"
-#     assert bot_before == BLUE, f"Expected right paddle at its bottom edge, got {bot_before}"
+    h = R_PADDLE_X + 5
+    top_v = V_DISPLAY // 2 - 3*X//2
+    bot_v = V_DISPLAY // 2 + PADDLE_HEIGHT - 1  - 3*X//2
 
-#     pong = dut.user_project.pong_inst
-#     for number in range(20):
-#         await wait_frame_tick(dut, cursor)
-#         dut._log.info(f"{number}: {pong.r_paddle_y.value}")
+    top_before = await sample_pixel(dut, cursor, h, top_v)
+    bot_before = await sample_pixel(dut, cursor, h, bot_v)
+    assert top_before == BLUE, f"Expected right paddle at its top edge, got {top_before}"
+    assert bot_before == BLUE, f"Expected right paddle at its bottom edge, got {bot_before}"
+
+    pong = dut.user_project.pong_inst
+    for number in range(9):
+        await wait_frame_tick(dut, cursor)
 
     
 
-#     top_after = await sample_pixel(dut, cursor, h, top_v)
-#     bot_after = await sample_pixel(dut, cursor, h, bot_v)
+    top_after = await sample_pixel(dut, cursor, h, top_v)
+    bot_after = await sample_pixel(dut, cursor, h, bot_v)
 
 
-#     # A downward move clears the top row; an upward move clears the bottom
-#     # row -- checking both edges catches movement in either direction.
-#     assert top_after != BLUE or bot_after != BLUE, (
-#         "Right paddle should have moved (neither edge changed color), but appears stationary"
-#     )
+    # A downward move clears the top row; an upward move clears the bottom
+    # row -- checking both edges catches movement in either direction.
+    assert top_after != BLUE or bot_after != BLUE, (
+        "Right paddle should have moved (neither edge changed color), but appears stationary"
+    )
+
+@cocotb.test()
+async def test_2player_mode(dut):
+    """Test 2-player mode"""
+    dut._log.info("Start 2-player mode")
+    start_clock(dut)
+    cursor = await reset_dut(dut)
+
+    h = R_PADDLE_X + 5
+    top_v = V_DISPLAY // 2 - 3 * X // 2
+
+    color_initial = await sample_pixel(dut, cursor, h, top_v)
+    assert color_initial == BLUE, f"Right paddle must be blue, got {color_initial}"
+
+    # ui_in[5] = r_player_enable, ui_in[3] = player_r_paddle_down
+    dut.ui_in.value = 0b0010_1000
+    await wait_frame_tick(dut, cursor)
+
+    color_after_move = await sample_pixel(dut, cursor, h, top_v)
+    assert color_after_move != BLUE, f"Right paddle should have descended, old position is still {color_after_move}"
+
+    dut.ui_in.value = 0
+
+@cocotb.test()
+async def test_ball_movement(dut):
+    """ Test ball moves from begin position"""
+    start_clock(dut)
+    cursor = await reset_dut(dut)
+
+    # Sample ball not in middle
+    sample_h = H_DISPLAY // 2 + 5   # X = 325
+    sample_v = V_DISPLAY // 2       # Y = 240
+
+    color = await sample_pixel(dut, cursor, sample_h, sample_v)
+    assert color == WHITE, f"Ball must be at ({sample_h}, {sample_v}), got: {color}"
+
+    await advance_edges(dut, cursor, 10 * FRAME_CYCLES)
+
+    color_after = await sample_pixel(dut, cursor, sample_h, sample_v)
+    assert color_after == BLACK, f"Ball must ({sample_h}, {sample_v}) leave the center after 10 frames, got: {color_after}"
+
+
+@cocotb.test()
+async def test_paddle_movement(dut):
+    """ Test paddles movement """
+
+    start_clock(dut)
+    cursor = await reset_dut(dut)
+    
+    # Left paddle 
+    l_sample_h = 2*X   # X = 30
+    r_sample_h = H_DISPLAY - 3*X  # X = 30
+    sample_v = V_DISPLAY // 2       # Y = 240
+
+    l_color = await sample_pixel(dut, cursor, l_sample_h, sample_v)
+    assert l_color == RED, f"left paddle must be red at ({l_sample_h}, {sample_v}), got: {l_color}"
+
+    r_color = await sample_pixel(dut, cursor, r_sample_h, sample_v)
+    assert r_color == BLUE, f"right paddle must be red at ({r_sample_h}, {sample_v}), got: {r_color}"
+
+    dut.ui_in.value = 0b0010_1001
+
+    await advance_edges(dut, cursor, 10 * FRAME_CYCLES)
+
+    l_color = await sample_pixel(dut, cursor, l_sample_h, sample_v)
+    assert l_color == BLACK, f"Begin position must be black at ({l_sample_h}, {sample_v}), got: {l_color}"
+
+    r_color = await sample_pixel(dut, cursor, r_sample_h, sample_v)
+    assert r_color == BLACK, f"Begin position must be black at ({r_sample_h}, {sample_v}), got: {r_color}"
+
+    
