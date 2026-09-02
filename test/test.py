@@ -241,7 +241,6 @@ async def test_right_paddle_neural_net(dut):
     assert top_before == BLUE, f"Expected right paddle at its top edge, got {top_before}"
     assert bot_before == BLUE, f"Expected right paddle at its bottom edge, got {bot_before}"
 
-    pong = dut.user_project.pong_inst
     for number in range(9):
         await wait_frame_tick(dut, cursor)
 
