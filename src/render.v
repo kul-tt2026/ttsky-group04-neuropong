@@ -52,6 +52,20 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
         .v_count(v_count),
         .draw_wins(draw_wins)
     );
+
+    wire draw_blue;
+    blue_render blue_inst (
+        .h_count(h_count),
+        .v_count(v_count),
+        .draw_blue(draw_blue)
+    );
+
+    wire draw_red;
+    red_render red_inst (
+        .h_count(h_count),
+        .v_count(v_count),
+        .draw_red(draw_red)
+    );
     
     always @(posedge clk) begin
         if (!reset_n) begin
@@ -68,14 +82,26 @@ module render(clk, reset_n, h_count, v_count, draw_enable, l_paddle_y, r_paddle_
                         blue <= 2'b11;
                     end else if (winner) begin
                         // right player won
-                        red <= 2'b00;
-                        green <= 2'b00;
-                        blue <= 2'b11;
+                        if (draw_blue) begin
+                            red <= 2'b11;
+                            green <= 2'b11;
+                            blue <= 2'b11;
+                        end else begin
+                            red <= 2'b00;
+                            green <= 2'b00;
+                            blue <= 2'b11;
+                        end
                     end else begin
                         // left player won
-                        red <= 2'b11;
-                        green <= 2'b00;
-                        blue <= 2'b00;
+                        if (draw_red) begin
+                            red <= 2'b11;
+                            green <= 2'b11;
+                            blue <= 2'b11;
+                        end else begin
+                            red <= 2'b11;
+                            green <= 2'b00;
+                            blue <= 2'b00;
+                        end
                     end
                 end else begin
                     // ball
