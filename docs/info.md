@@ -22,6 +22,8 @@ The different modules/functions used are:
     - render: telling what color each pixel needs
     - score_render: telling which pixels should be colored for displaying the score
     - wins_render: telling which pixels the word "wins" includes
+    - blue_render: telling which pixels the word "blue" includes
+    - red_render: telling which pixels the word "red" includes
     - VGA_sync: cycling through each pixel per frame
     - tt_um_neuropong: linking inputs/outputs between internal modules
 

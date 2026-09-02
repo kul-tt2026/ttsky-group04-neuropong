@@ -4,9 +4,9 @@ module wins_render (h_count, v_count, draw_wins);
  input wire [9:0] v_count;
  output wire draw_wins;
 
- parameter START_X = 170;
- parameter START_Y = 200;
- parameter FONT_SCALE = 10;
+ parameter START_X = 330;
+ parameter START_Y = 220;
+ parameter FONT_SCALE = 5;
 
  /*
     Each letter is a 8x8 bitmap.
@@ -26,6 +26,7 @@ module wins_render (h_count, v_count, draw_wins);
  reg [7:0] row_bits;
 
  always @(*) begin
+    row_bits = 8'b00000000;
         case (char_index)
             2'b00: begin // 'W'
                 case (char_y)
