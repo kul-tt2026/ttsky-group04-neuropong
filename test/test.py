@@ -9,7 +9,35 @@ H_DISPLAY = 640
 V_DISPLAY = 480
 H_TOTAL = 800
 V_TOTAL = 525
+FRAME_CYCLES = H_TOTAL * V_TOTAL  # one full VGA_sync
+
 X = 15
+L_PADDLE_X = 2 * X                # 30
+R_PADDLE_X = H_DISPLAY - 3 * X    # 595
+PADDLE_HEIGHT = 5 * X             # 75
+
+# 7-segment score digit locations 
+SCORE_SEG = {
+    "l": {"A": (260, 32), "D": (260, 77), "G": (260, 54)},
+    "r": {"A": (370, 32), "D": (370, 77), "G": (370, 54)},
+}
+
+WHITE = (0b11, 0b11, 0b11)   # ball
+RED = (0b11, 0b00, 0b00)     # left paddle
+BLUE = (0b00, 0b00, 0b11)    # right paddle
+BLACK = (0b00, 0b00, 0b00)   # background
+GRAY = (0b10, 0b10, 0b10)    # score digit segment
+
+
+class VGACursor:
+    """Tracks how many clock edges have elapsed since h_count/v_count were
+    last known to be (0, 0), so we can compute pixel timing purely from the
+    clock -- without reading VGA_sync's internal counters. This is what
+    makes these tests work identically in RTL and gate-level simulation."""
+
+    def __init__(self, cycle):
+        self.cycle = cycle % FRAME_CYCLES
+
 
 async def reset_dut(dut):
     dut.ena.value = 1
@@ -19,6 +47,9 @@ async def reset_dut(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
     await RisingEdge(dut.clk)
+    # cycle still zero because color is always one cycle after h_count
+    return VGACursor(cycle=0)
+
 
 async def get_output(dut):
     uo = dut.uo_out.value
@@ -32,8 +63,51 @@ async def get_output(dut):
 
     return red, green, blue, hsync, vsync
 
-async def wait_frame_tick(dut):
-    await ClockCycles(dut.clk, H_TOTAL * V_TOTAL)  # Wait for one frame tick
+
+async def wait_frame_tick(dut, cursor):
+    await ClockCycles(dut.clk, FRAME_CYCLES)
+    cursor.cycle = (cursor.cycle + FRAME_CYCLES) % FRAME_CYCLES
+
+
+async def advance_edges(dut, cursor, n):
+    await ClockCycles(dut.clk, n)
+    cursor.cycle = (cursor.cycle + n) % FRAME_CYCLES
+
+
+async def sample_pixel(dut, cursor, target_h, target_v):
+    target_cycle = target_v * H_TOTAL + target_h
+    delta = (target_cycle - cursor.cycle) % FRAME_CYCLES
+    if delta:
+        await ClockCycles(dut.clk, delta)
+        cursor.cycle = (cursor.cycle + delta) % FRAME_CYCLES
+
+    await RisingEdge(dut.clk)  # let render's registered color catch up
+    cursor.cycle = (cursor.cycle + 1) % FRAME_CYCLES
+
+    red, green, blue, _, _ = await get_output(dut)
+    return red, green, blue
+
+
+async def assert_scores_zero(dut, cursor):
+    
+    checks = [
+        ("l", "A", True), ("r", "A", True),
+        ("l", "G", False), ("r", "G", False),
+        ("l", "D", True), ("r", "D", True),
+    ]
+    for side, seg, expected_on in checks:
+        h, v = SCORE_SEG[side][seg]
+        color = await sample_pixel(dut, cursor, h, v)
+        is_on = color == GRAY
+        if expected_on:
+            assert is_on, (
+                f"{side}_score segment {seg} should be lit for score=0, got {color}"
+            )
+        else:
+            assert not is_on, (
+                f"{side}_score segment {seg} should be OFF for score=0, got {color}"
+            )
+
 
 def start_clock(dut):
     # Set the clock period to 39.72 ns (25.175 MHz) ==> 60 FPS
@@ -43,17 +117,19 @@ def start_clock(dut):
 
 @cocotb.test()
 async def test_reset_state(dut):
-
     dut._log.info("Start reset test")
     start_clock(dut)
+    cursor = await reset_dut(dut)
 
-    await reset_dut(dut)
+    await assert_scores_zero(dut, cursor)
+    
+    color = await sample_pixel(dut, cursor, H_DISPLAY // 2 - (X//2), V_DISPLAY // 2 - (X//2))
+    assert color == WHITE, f"Ball's top-left corner must be at ({H_DISPLAY // 2 - (X//2)},{V_DISPLAY // 2 - (X//2)})"
 
-    pong = dut.user_project.pong_inst
-    assert pong.l_score.value == 0, f"l_score must be 0 after reset, got {pong.l_score.value}"
-    assert pong.r_score.value == 0, f"r_score must be 0 after reset, got {pong.r_score.value}"
-    assert pong.ball_x.value == H_DISPLAY // 2 - X // 2, f"ball_x must be {H_DISPLAY // 2 - X // 2} after reset, got {pong.ball_x.value}"
-    assert pong.ball_y.value == V_DISPLAY // 2 - X // 2, f"ball_y must be {V_DISPLAY // 2 - X // 2} after reset, got {pong.ball_y.value}"
+    
+    color = await sample_pixel(dut, cursor, H_DISPLAY // 2, V_DISPLAY // 2)
+    assert color == WHITE, f"Ball must be centered after reset, got {color}"
+
 
 @cocotb.test()
 async def test_no_unknown_outputs(dut):
@@ -62,11 +138,11 @@ async def test_no_unknown_outputs(dut):
 
     await reset_dut(dut)
 
-
     # Each output must always have values of 0 or 1
     for _ in range(2000):
         await RisingEdge(dut.clk)
         assert dut.uo_out.value.is_resolvable, f"uo_out has unknown value: {dut.uo_out.value}"
+
 
 @cocotb.test()
 async def test_hsync_vsync(dut):
@@ -77,81 +153,176 @@ async def test_hsync_vsync(dut):
     await RisingEdge(dut.clk)
 
     _, _, _, hsync, vsync = await get_output(dut)
-    assert hsync == 1, f"hsync must be 1 outside of sync pulse"
-    assert vsync == 1, f"vsync must be 1 outside of sync pulse"
+    assert hsync == 1, "hsync must be 1 outside of sync pulse"
+    assert vsync == 1, "vsync must be 1 outside of sync pulse"
+
 
 @cocotb.test()
 async def test_color_bit_mapping(dut):
+    dut._log.info("Start color bit mapping test")
     start_clock(dut)
+    cursor = await reset_dut(dut)
 
-    await reset_dut(dut)
+    # Background -> black (v=50, checked first)
+    color = await sample_pixel(dut, cursor, 50, 50)
+    assert color == BLACK, f"Background pixel should be black, got {color}"
 
-    # Check that the color bits are correctly mapped to the output
-    render_inst = dut.user_project.render_inst
-    
-    render_inst.red.value = 0b10
-    render_inst.green.value = 0b01
-    render_inst.blue.value = 0b11
-    await RisingEdge(dut.clk)
+    # Ball -> white (all channels max) (v=247)
+    color = await sample_pixel(dut, cursor, H_DISPLAY // 2, V_DISPLAY // 2)
+    assert color == WHITE, f"Ball pixel should be white, got {color}"
 
-    red, green, blue, _, _ = await get_output(dut)
-    assert red == 0b10, f"Red bit mapping error: expected 0b10, got {red}"
-    assert green == 0b01, f"Green bit mapping error: expected 0b01, got {green}"
-    assert blue == 0b11, f"Blue bit mapping error: expected 0b11, got {blue}"
+    # Left paddle -> pure red (v=250, h=35)
+    color = await sample_pixel(dut, cursor, L_PADDLE_X + 5, V_DISPLAY // 2 - 3*X//2 + 10)
+    assert color == RED, f"Left paddle pixel should be pure red, got {color}"
+
+    # Right paddle -> pure blue (v=250, h=600 -- same row, higher h)
+    color = await sample_pixel(dut, cursor, R_PADDLE_X + 5, V_DISPLAY // 2 - 3*X//2 + 10)
+    assert color == BLUE, f"Right paddle pixel should be pure blue, got {color}"
+
 
 @cocotb.test()
 async def test_left_paddle_movement(dut):
     dut._log.info("Start left paddle movement test")
     start_clock(dut)
+    cursor = await reset_dut(dut)
 
-    await reset_dut(dut)
+    # Top edge of the paddle's initial box: [V_DISPLAY/2 , V_DISPLAY/2 + PADDLE_HEIGHT)
+    top_h, top_v = L_PADDLE_X, V_DISPLAY // 2 - 3*X//2
 
-    pong = dut.user_project.pong_inst
-    start_y = int(pong.l_paddle_y.value)
+    color = await sample_pixel(dut, cursor, top_h, top_v)
+    assert color == RED, f"Expected left paddle at its initial top edge, got {color}"
 
-    assert start_y == V_DISPLAY // 2 - (3*X // 2), f"Left paddle initial position must be {V_DISPLAY // 2 - (3*X // 2)}, got {start_y}"
+    dut.ui_in.value = 0b0000_0010  # move left paddle down
+    await wait_frame_tick(dut, cursor)
 
-    dut.ui_in.value = 0b0000_0010 # move left paddle down
-    await wait_frame_tick(dut)
+    color = await sample_pixel(dut, cursor, top_h, top_v)
+    assert color != RED, f"Left paddle should have moved down, old top row is still {color}"
 
-    assert int(pong.l_paddle_y.value) > start_y, f"Left paddle should have moved down, but is at {pong.l_paddle_y.value}"
 
 @cocotb.test()
 async def test_game_reset(dut):
     dut._log.info("Start game reset test")
     start_clock(dut)
+    cursor = await reset_dut(dut)
 
-    await reset_dut(dut)
+    await assert_scores_zero(dut, cursor)
 
-    pong = dut.user_project.pong_inst
-    dut.ui_in.value = 0b0000_0010 # move left paddle down
-    await wait_frame_tick(dut)
-    assert int(pong.l_paddle_y.value) != V_DISPLAY // 2 - (3*X // 2), f"Left paddle should have moved down, but is at {pong.l_paddle_y.value}"
+    top_h, top_v = L_PADDLE_X, V_DISPLAY // 2 - 3*X//2
 
-    dut.ui_in.value = 0b0001_0000 # game reset
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
+    dut.ui_in.value = 0b0000_0010  # move left paddle down
+    await wait_frame_tick(dut, cursor)
 
-    assert int(pong.l_paddle_y.value) == V_DISPLAY // 2 - (3*X // 2), f"Left paddle should have reset to {V_DISPLAY // 2 - (3*X // 2)}, but is at {pong.l_paddle_y.value}"
-    assert int(pong.l_score.value) == 0, f"Left score should have reset to 0, but is at {pong.l_score.value}"
-    assert int(pong.r_score.value) == 0, f"Right score should have reset to 0, but is at {pong.r_score.value}"
+    color = await sample_pixel(dut, cursor, top_h, top_v)
+    assert color != RED, "Left paddle should have moved away from its top row before reset"
+
+    dut.ui_in.value = 0b0001_0000  # game reset
+    await advance_edges(dut, cursor, 2)
+    dut.ui_in.value = 0  # release the button so nothing keeps drifting
+
+    color = await sample_pixel(dut, cursor, H_DISPLAY // 2, V_DISPLAY // 2)
+    assert color == WHITE, f"Ball should have reset to its centered position, got {color}"
+
+    color = await sample_pixel(dut, cursor, top_h, top_v)
+    assert color == RED, f"Left paddle should have reset to its centered position, got {color}"
+
 
 @cocotb.test()
 async def test_right_paddle_neural_net(dut):
     dut._log.info("Start right paddle neural net test")
     start_clock(dut)
+    cursor = await reset_dut(dut)
 
-    await reset_dut(dut)
+    h = R_PADDLE_X + 5
+    top_v = V_DISPLAY // 2 - 3*X//2
+    bot_v = V_DISPLAY // 2 + PADDLE_HEIGHT - 1  - 3*X//2
 
-    pong = dut.user_project.pong_inst
-    start_y = int(pong.r_paddle_y.value)
+    top_before = await sample_pixel(dut, cursor, h, top_v)
+    bot_before = await sample_pixel(dut, cursor, h, bot_v)
+    assert top_before == BLUE, f"Expected right paddle at its top edge, got {top_before}"
+    assert bot_before == BLUE, f"Expected right paddle at its bottom edge, got {bot_before}"
 
-    assert start_y == V_DISPLAY // 2 - (3*X // 2), f"Right paddle initial position must be {V_DISPLAY // 2 - (3*X // 2)}, got {start_y}"
-    pong.ball_x.value = 570
-    pong.ball_y.value = 440
-    for _ in range(5):
-        await wait_frame_tick(dut)
+    for number in range(9):
+        await wait_frame_tick(dut, cursor)
 
-    end_y = int(pong.r_paddle_y.value)
-    assert end_y != start_y, f"Right paddle should have moved, but is still at {pong.r_paddle_y.value}"
-    dut._log.info(f"{pong.r_paddle_y.value}")
+    
+
+    top_after = await sample_pixel(dut, cursor, h, top_v)
+    bot_after = await sample_pixel(dut, cursor, h, bot_v)
+
+
+    # A downward move clears the top row; an upward move clears the bottom
+    # row -- checking both edges catches movement in either direction.
+    assert top_after != BLUE or bot_after != BLUE, (
+        "Right paddle should have moved (neither edge changed color), but appears stationary"
+    )
+
+@cocotb.test()
+async def test_2player_mode(dut):
+    """Test 2-player mode"""
+    dut._log.info("Start 2-player mode")
+    start_clock(dut)
+    cursor = await reset_dut(dut)
+
+    h = R_PADDLE_X + 5
+    top_v = V_DISPLAY // 2 - 3 * X // 2
+
+    color_initial = await sample_pixel(dut, cursor, h, top_v)
+    assert color_initial == BLUE, f"Right paddle must be blue, got {color_initial}"
+
+    # ui_in[5] = r_player_enable, ui_in[3] = player_r_paddle_down
+    dut.ui_in.value = 0b0010_1000
+    await wait_frame_tick(dut, cursor)
+
+    color_after_move = await sample_pixel(dut, cursor, h, top_v)
+    assert color_after_move != BLUE, f"Right paddle should have descended, old position is still {color_after_move}"
+
+    dut.ui_in.value = 0
+
+@cocotb.test()
+async def test_ball_movement(dut):
+    """ Test ball moves from begin position"""
+    start_clock(dut)
+    cursor = await reset_dut(dut)
+
+    # Sample ball not in middle
+    sample_h = H_DISPLAY // 2 + 5   # X = 325
+    sample_v = V_DISPLAY // 2       # Y = 240
+
+    color = await sample_pixel(dut, cursor, sample_h, sample_v)
+    assert color == WHITE, f"Ball must be at ({sample_h}, {sample_v}), got: {color}"
+
+    await advance_edges(dut, cursor, 10 * FRAME_CYCLES)
+
+    color_after = await sample_pixel(dut, cursor, sample_h, sample_v)
+    assert color_after == BLACK, f"Ball must ({sample_h}, {sample_v}) leave the center after 10 frames, got: {color_after}"
+
+
+@cocotb.test()
+async def test_paddle_movement(dut):
+    """ Test paddles movement """
+
+    start_clock(dut)
+    cursor = await reset_dut(dut)
+    
+    # Left paddle 
+    l_sample_h = 2*X   # X = 30
+    r_sample_h = H_DISPLAY - 3*X  # X = 30
+    sample_v = V_DISPLAY // 2       # Y = 240
+
+    l_color = await sample_pixel(dut, cursor, l_sample_h, sample_v)
+    assert l_color == RED, f"left paddle must be red at ({l_sample_h}, {sample_v}), got: {l_color}"
+
+    r_color = await sample_pixel(dut, cursor, r_sample_h, sample_v)
+    assert r_color == BLUE, f"right paddle must be red at ({r_sample_h}, {sample_v}), got: {r_color}"
+
+    dut.ui_in.value = 0b0010_1001
+
+    await advance_edges(dut, cursor, 10 * FRAME_CYCLES)
+
+    l_color = await sample_pixel(dut, cursor, l_sample_h, sample_v)
+    assert l_color == BLACK, f"Begin position must be black at ({l_sample_h}, {sample_v}), got: {l_color}"
+
+    r_color = await sample_pixel(dut, cursor, r_sample_h, sample_v)
+    assert r_color == BLACK, f"Begin position must be black at ({r_sample_h}, {sample_v}), got: {r_color}"
+
+    

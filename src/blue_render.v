@@ -6,7 +6,7 @@ module blue_render (h_count, v_count, draw_blue);
 
  parameter START_X = 150;
  parameter START_Y = 220;
- parameter FONT_SCALE = 5;
+ parameter FONT_SCALE = 4;
 
  /*
     Each letter is a 8x8 bitmap.
