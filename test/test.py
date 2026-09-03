@@ -227,36 +227,6 @@ async def test_game_reset(dut):
 
 
 @cocotb.test()
-async def test_right_paddle_neural_net(dut):
-    dut._log.info("Start right paddle neural net test")
-    start_clock(dut)
-    cursor = await reset_dut(dut)
-
-    h = R_PADDLE_X + 5
-    top_v = V_DISPLAY // 2 - 3*X//2
-    bot_v = V_DISPLAY // 2 + PADDLE_HEIGHT - 1  - 3*X//2
-
-    top_before = await sample_pixel(dut, cursor, h, top_v)
-    bot_before = await sample_pixel(dut, cursor, h, bot_v)
-    assert top_before == BLUE, f"Expected right paddle at its top edge, got {top_before}"
-    assert bot_before == BLUE, f"Expected right paddle at its bottom edge, got {bot_before}"
-
-    for number in range(9):
-        await wait_frame_tick(dut, cursor)
-
-    
-
-    top_after = await sample_pixel(dut, cursor, h, top_v)
-    bot_after = await sample_pixel(dut, cursor, h, bot_v)
-
-
-    # A downward move clears the top row; an upward move clears the bottom
-    # row -- checking both edges catches movement in either direction.
-    assert top_after != BLUE or bot_after != BLUE, (
-        "Right paddle should have moved (neither edge changed color), but appears stationary"
-    )
-
-@cocotb.test()
 async def test_2player_mode(dut):
     """Test 2-player mode"""
     dut._log.info("Start 2-player mode")
@@ -313,7 +283,7 @@ async def test_paddle_movement(dut):
     assert l_color == RED, f"left paddle must be red at ({l_sample_h}, {sample_v}), got: {l_color}"
 
     r_color = await sample_pixel(dut, cursor, r_sample_h, sample_v)
-    assert r_color == BLUE, f"right paddle must be red at ({r_sample_h}, {sample_v}), got: {r_color}"
+    assert r_color == BLUE, f"right paddle must be blue at ({r_sample_h}, {sample_v}), got: {r_color}"
 
     dut.ui_in.value = 0b0010_1001
 

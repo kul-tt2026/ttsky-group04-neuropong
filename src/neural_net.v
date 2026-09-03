@@ -94,7 +94,9 @@ module neural_net (clk, reset_n, frame_tick, ball_y, ball_dir_x, ball_dir_y, pad
     end
 
     // Binarize/ternarize the game state into the input feature vector
-    wire signed [10:0] diff = $signed({1'b0, ball_y}) - $signed({1'b0, paddle_y});
+    wire [9:0] paddle_center = paddle_y + 37; // add half the paddle height
+
+    wire signed [10:0] diff = $signed({1'b0, ball_y}) - $signed({1'b0, paddle_center});
 
     wire signed [1:0] t_diff = (diff >  DEAD_ZONE) ?  2'sd1 :
                                  (diff < -DEAD_ZONE) ? -2'sd1 : 2'sd0; // To prevent 'tremors' in paddle control

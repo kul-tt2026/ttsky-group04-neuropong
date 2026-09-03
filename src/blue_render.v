@@ -4,9 +4,9 @@ module blue_render (h_count, v_count, draw_blue);
  input wire [9:0] v_count;
  output wire draw_blue;
 
- parameter START_X = 150;
- parameter START_Y = 220;
- parameter FONT_SCALE = 4;
+ parameter START_X = 32;
+ parameter START_Y = 208;
+ parameter FONT_SCALE = 8;
 
  /*
     Each letter is a 8x8 bitmap.

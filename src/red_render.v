@@ -4,9 +4,9 @@ module red_render (h_count, v_count, draw_red);
  input wire [9:0] v_count;
  output wire draw_red;
 
- parameter START_X = 190;
- parameter START_Y = 220;
- parameter FONT_SCALE = 4;
+ parameter START_X = 96;
+ parameter START_Y = 208;
+ parameter FONT_SCALE = 8;
 
  /*
     Each letter is a 8x8 bitmap.
