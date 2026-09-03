@@ -1,4 +1,4 @@
-module neural_net (clk, reset_n, frame_tick, ball_y, ball_dir_x, ball_dir_y, paddle_y, paddle_up, paddle_down);
+module neural_net (clk, reset_n, frame_tick, ball_y, ball_dir_x, ball_dir_y, paddle_y, weight_load, weight_in, paddle_up, paddle_down);
 
     // IO
     input wire clk;
@@ -10,11 +10,14 @@ module neural_net (clk, reset_n, frame_tick, ball_y, ball_dir_x, ball_dir_y, pad
     input wire ball_dir_y; // 1 => to top, 0 => to bottom
     input wire [9:0] paddle_y;   // (neural net paddle)
 
+    input wire weight_load; // shift weight_in into the weight chain on every clk while high
+    input wire weight_in;   // serial weight bit, MSB first
+
     output reg paddle_up;
     output reg paddle_down;
 
     // Ternary neural network
-    // Weights & thresholds are frozen at hardening.
+    // Weights are reprogrammable post-hardening via weight_load/weight_in; thresholds stay fixed.
     parameter N_IN  = 3;    // ternary input features
     parameter N_HID = 8;    // hidden neurons
     parameter N_OUT = 2;    // outputs: {up, down}
@@ -27,24 +30,37 @@ module neural_net (clk, reset_n, frame_tick, ball_y, ball_dir_x, ball_dir_y, pad
     localparam [1:0] WZ = 2'b00; //  0
     localparam [1:0] WN = 2'b10; // -1
 
-    // Fixed ternary weights
-    // Hidden layer, 3 weights (dir_x, dir_y, diff) per neuron
-    parameter [N_HID*N_IN*2-1:0] W_HID = {
-        WZ, WN, WP,
-        WZ, WN, WP,
-        WZ, WZ, WP,
-        WZ, WZ, WP,
-        WZ, WZ, WP,
-        WZ, WZ, WP,
-        WZ, WZ, WP,
-        WZ, WZ, WP
-    };
+    localparam W_HID_BITS = N_HID*N_IN*2;   // 48
+    localparam W_OUT_BITS = N_OUT*N_HID*2;  // 32
+    localparam W_BITS     = W_HID_BITS + W_OUT_BITS;
 
-    // Output layer, 8 weights (one per hidden neuron) per output
-    parameter [N_OUT*N_HID*2-1:0] W_OUT = {
-        WP, WP, WP, WP, WP, WP, WP, WP,
-        WN, WN, WN, WN, WN, WN, WN, WN
-    };
+    // Trained ternary weights, held in a shift register so they can be
+    // reloaded after hardening. Holding weight_load high for W_BITS clocks
+    // while feeding weight_in shifts a new W_HID ++ W_OUT vector in, MSB first.
+    reg [W_BITS-1:0] weight_shift;
+    always @(posedge clk) begin
+        if (!reset_n) begin
+            weight_shift <= {
+                // Hidden layer, 3 weights (dir_x, dir_y, diff) per neuron
+                WZ, WN, WP,
+                WZ, WN, WP,
+                WZ, WZ, WP,
+                WZ, WZ, WP,
+                WZ, WZ, WP,
+                WZ, WZ, WP,
+                WZ, WZ, WP,
+                WZ, WZ, WP,
+                // Output layer, 8 weights (one per hidden neuron) per output
+                WP, WP, WP, WP, WP, WP, WP, WP,
+                WN, WN, WN, WN, WN, WN, WN, WN
+            };
+        end else if (weight_load) begin
+            weight_shift <= {weight_shift[W_BITS-2:0], weight_in};
+        end
+    end
+
+    wire [W_HID_BITS-1:0] W_HID = weight_shift[W_BITS-1 -: W_HID_BITS];
+    wire [W_OUT_BITS-1:0] W_OUT = weight_shift[W_OUT_BITS-1:0];
 
     // Fixed neuron thresholds (signed)
     parameter signed [N_HID*3-1:0] TH_HID_POS = {8{3'sd1}};

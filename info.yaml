@@ -38,8 +38,8 @@ pinout:
   ui[3]: "R_PDL_DOWN"
   ui[4]: "GAME_RESET"
   ui[5]: "R_PLAYER_ENABLE"
-  ui[6]: ""
-  ui[7]: ""
+  ui[6]: "WEIGHT_LOAD"
+  ui[7]: "WEIGHT_IN"
 
   # Outputs
   uo[0]: "R1"

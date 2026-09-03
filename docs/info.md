@@ -15,6 +15,8 @@ As a player you control your paddle and have two inputs, either you move your pa
 If no input is given the paddle stays still. You stay in the game by reflecting the ball with your paddle back to the opponent. The further the ball hits a paddle from its center the greater the angle of reflection of the ball wil be.
 Use this to your advantage to win against your opponent. If you score 10 points by bouncing the ball such that the opponent can't intercept it, you win the game.
 
+The neural net's weights live in a shift register instead of being burned into the netlist, so the AI can still be retrained after the chip has been hardened. Hold input 6 (weight load) high and clock a new set of weights, MSB first, into input 7 (weight data) to reprogram it.
+
 The different modules/functions used are:
     - pong_logic: defining the rules that make up the game Pong
     - paddle_reflection: giving the ball a different travel path when hitting one of the paddles
@@ -34,6 +36,8 @@ For the input you need to connect two buttons to the VCC on the demo board and w
 Same goes for the right paddle with input 2 (right paddle up) and input 3 (right paddle down). Also connect a button with input 4 (game reset)
 and a toggle switch with input 5 (right player enable).
 With the use of a Tiny VGA Pmod you can connect the output of the demo board to a VGA screen (640x480).
+
+To reprogram the neural net, hold input 6 (weight load) high and drive 80 bits of new weight data, MSB first, one bit per clock, into input 7 (weight data).
 
 Furthermore supply a clock signal of 25.175 MHz.
 

@@ -22,9 +22,11 @@ module tt_um_neuropong (
   wire player_r_paddle_down = ui_in[3];
   wire game_reset = ui_in[4];   // player button to restart the game
   wire r_player_enable = ui_in[5];
+  wire weight_load = ui_in[6];  // shift a new neural net weight in on ui_in[7] while high
+  wire weight_in = ui_in[7];
 
   // Unused inputs (the right paddle is driven by the neural net, ui_in[2:3] free)
-  wire _unused = &{ena, ui_in[7:6], uio_in, 1'b0};
+  wire _unused = &{ena, uio_in, 1'b0};
 
   assign uio_out = 8'b0000_0000;
   assign uio_oe = 8'b0000_0000;
@@ -105,6 +107,8 @@ module tt_um_neuropong (
       .ball_dir_x (ball_dir_x),
       .ball_dir_y (ball_dir_y),
       .paddle_y   (r_paddle_y),
+      .weight_load(weight_load),
+      .weight_in  (weight_in),
       .paddle_up  (nn_paddle_up),
       .paddle_down(nn_paddle_down)
   );
