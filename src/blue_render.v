@@ -55,12 +55,12 @@ module blue_render (h_count, v_count, draw_blue);
         2'b10: begin // 'U'
             case (char_y)
                 3'd0: row_bits = 8'b00000000;
-                3'd1: row_bits = 8'b10000010;
-                3'd2: row_bits = 8'b10000010;
-                3'd3: row_bits = 8'b10000010;
-                3'd4: row_bits = 8'b10000010;
-                3'd5: row_bits = 8'b10000010;
-                3'd6: row_bits = 8'b10000010;
+                3'd1: row_bits = 8'b01000010;
+                3'd2: row_bits = 8'b01000010;
+                3'd3: row_bits = 8'b01000010;
+                3'd4: row_bits = 8'b01000010;
+                3'd5: row_bits = 8'b01000010;
+                3'd6: row_bits = 8'b01000010;
                 3'd7: row_bits = 8'b00111100;
             endcase
         end
